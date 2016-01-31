@@ -1,145 +1,119 @@
 // starting vertex dot vars
-var DOT_COLOR = 0xffa500;
+var DOT_COLOR = '#FFA500';
 var DOT_OPACITY = 0.6;
 var dot;
 
 // polygon vars
-var POLY_A_COLOR = 0x00bbff;
-var POLY_B_COLOR = 0x1aa130; 
-var POLY_ERR_COLOR = 0xa31d46;
+var POLY_A_COLOR = '#00BBFF';
+var POLY_B_COLOR = '#1AA130';
+var POLY_ERR_COLOR = '#A31D46';
 var POLY_HALF_OPACITY = 0.6;
-var isValidPoly;
-var polyA = [];
-var polyB = [];
-var polyCurr;
-var sA, sB, sCurr; // sprites
 
-var currentPoint, origin; // for keeping track of first and last vertex
+ // max distance from start vertex at which we close poly
+var PRECISION = 30;
 
-var PRECISION = 30; // max distance from start vertex to close poly
+$(function() {
+    var two = new Two({
+        fullscreen: true
+    }).appendTo(document.body);
 
-var stage;
+    var mouse = new Two.Anchor(0,0);
 
-function Go()
-{
-    stage = new Stage("c");
+    var polyA = two.makePath(0,0).noStroke();
+    polyA.fill = POLY_A_COLOR;
+    polyA.opacity = POLY_HALF_OPACITY;
 
-    sA = new Sprite();
-    sB = new Sprite();
-    stage.addChild(sA);
-    stage.addChild(sB);
-    sCurr = sA;
-    polyCurr = polyA;
+    var polyB = two.makePath(0,0).noStroke();
+    polyB.fill = POLY_B_COLOR;
+    polyB.opacity = POLY_HALF_OPACITY;
 
-    isValidPoly = true;
-    
-    stage.addEventListener(MouseEvent.CLICK, addPoint);
-    stage.addEventListener(MouseEvent.MOUSE_MOVE, userDraw);
-}
+    var polyCurr = polyA;
 
-function addPoint(e)
-{
-    if (isValidPoly) // polygon simple
+    var dot; // marks the start vertex
+    var isValidPoly = true; // none of the edges cross each other
+    var origin = new Two.Anchor(0,0);
+
+    $window = $(window).bind('mousemove.userDrawing', redraw).bind('click.userDrawing', addPoint);
+
+    function addPoint(e)
     {
-        var mousePt = new Point(stage.mouseX, stage.mouseY);
-        if(polyCurr.length > 0) // polygon path non-empty
+        redraw(e);
+
+        if(isValidPoly)
         {
-            // check if too far to close poly
-            if(Point.distance(origin, mousePt) > PRECISION)
+            if(polyCurr.vertices.length > 1)
             {
-                polyCurr.push(mousePt.x, mousePt.y);
-                currentPoint = mousePt;
-                isValidPoly = false;
-            }
-            else if(polyCurr.length >= 3) // valid poly so we close
-            {
-                userDraw();
-                stage.removeChild(dot);
-                // if finished first poly, swithch to second
-                if (sCurr == sA)
-                { 
-                    sCurr = sB;
-                    polyCurr = polyB;
-                }
-                // if finished second, done drawing
-                else
+                if (origin.distanceTo(mouse) > PRECISION)
                 {
-                    stage.removeEventListener(MouseEvent.CLICK, addPoint);
-                    stage.removeEventListener(MouseEvent.MOUSE_MOVE, userDraw);
+                    polyCurr.vertices.push(mouse.clone()); // add a vertex
+                }
+                else if(polyCurr.vertices.length > 3)
+                {
+                    polyCurr.vertices.pop(); // remove helper mouse pointer vertex
+                    two.remove(dot);
+
+                    if(polyCurr == polyA)
+                    {
+                        // start drawing second poly
+                        polyCurr = polyB;
+                        origin = new Two.Anchor(0.0);
+                    }
+                    else
+                    {
+                        $window.unbind('.userDrawing'); // input completed
+                    }
                 }
             }
+            else // first vertex
+            {
+                dot = two.makeCircle(mouse.x, mouse.y, PRECISION).noStroke();
+                dot.fill = DOT_COLOR;
+                dot.opacity = DOT_OPACITY;
+
+                origin = polyCurr.vertices[polyCurr.vertices.length-1];
+
+                polyCurr.vertices.push(mouse.clone());
+            }
+
+            two.update();
+        }
+    }
+
+    function redraw(e)
+    {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+
+        if (origin.distanceTo(mouse) > PRECISION)
+        {
+            polyCurr.opacity = POLY_HALF_OPACITY;
+            polyCurr.vertices[polyCurr.vertices.length-1].x = mouse.x;
+            polyCurr.vertices[polyCurr.vertices.length-1].y = mouse.y;
         }
         else
         {
-            // drawing first vertex of poly so we mark it
-            origin = mousePt;
-            polyCurr.push(mousePt.x, mousePt.y);
-            currentPoint = mousePt;
-            dot = new Dot();
-            dot.x = mousePt.x;
-            dot.y = mousePt.y;
-            stage.addChild(dot);
-            isValidPoly = false;
+            polyCurr.opacity = 1;
+            polyCurr.vertices[polyCurr.vertices.length-1].x = polyCurr.vertices[polyCurr.vertices.length-2].x;
+            polyCurr.vertices[polyCurr.vertices.length-1].y = polyCurr.vertices[polyCurr.vertices.length-2].y;
         }
-        userDraw();
+
+        if(isValidPoly = PolyK.IsSimple(toPolyK(polyCurr)) || origin.distanceTo(mouse) <= PRECISION )
+        {
+            polyA.fill = POLY_A_COLOR;
+            polyB.fill = POLY_B_COLOR;
+        }
+        else
+        {
+            polyCurr.fill = POLY_ERR_COLOR;
+        }
+
+        two.update();
     }
-}
-           
-function userDraw()
+});
+
+function toPolyK(p)
 {
-    // we draw the poly only if it exists
-    if(polyCurr.length > 0)
-    {
-        // if we are close enough to start vertex, we draw our final closed poly
-        // otherwise we append the current mouse point
-        var mousePt = new Point(stage.mouseX, stage.mouseY);
-        var polyTemp = polyCurr.slice();
-        polyTemp.push(mousePt.x, mousePt.y);
-        var polyActual = Point.distance(origin, mousePt) > PRECISION ? polyTemp : polyCurr;
-        
-        isValidPoly = PolyK.IsSimple(polyActual);
-
-        sCurr.graphics.clear();
-        drawPoly(polyActual, sCurr);
-    }
+    return $.map(p.vertices, function(v) {
+        return [v.x, v.y];
+    })
 }
-
-
-function drawPoly(poly, p)
-{
-    var mousePt = new Point(stage.mouseX, stage.mouseY);
-    // choose smaller opacity if polygon is not completed
-    var opacity = Point.distance(origin, mousePt) > PRECISION ? POLY_HALF_OPACITY : 1;
-    var color;
-    if (isValidPoly)
-    {
-        // choose color for poly depending if it is the first or second
-        color = polyCurr == polyA ? POLY_A_COLOR : POLY_B_COLOR;
-    }   
-    else
-    {
-        // poly is not simple so we color it an error color
-        color = POLY_ERR_COLOR;
-    }
-    p.graphics.beginFill(color, opacity);
-
-    // go through each pair of vertices and draw the edges
-    var n = poly.length >> 1;
-    p.graphics.moveTo(poly[0], poly[1]);
-    for(var i=1; i<n; i++) 
-    {
-        p.graphics.lineTo(poly[2*i], poly[2*i+1]);
-    }
-    p.graphics.lineTo(poly[0], poly[1]);
-
-    p.graphics.endFill();
-}
-
-
-function Dot()
-{
-    Sprite.apply(this);  // inherits from Sprite
-    this.graphics.beginFill(DOT_COLOR, DOT_OPACITY);
-    this.graphics.drawCircle(0,0,PRECISION);
-}
-Dot.prototype = new Sprite();
