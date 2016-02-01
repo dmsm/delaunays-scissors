@@ -8,9 +8,22 @@ var POLY_A_COLOR = '#00BBFF';
 var POLY_B_COLOR = '#1AA130';
 var POLY_ERR_COLOR = '#A31D46';
 var POLY_HALF_OPACITY = 0.6;
+var AREA = 30000;
+var EPSILON = 300;
+var ALPHA = 0.01;
+var TRANSLATION_TIME = 100;
+var PADDING = 50;
 
  // max distance from start vertex at which we close poly
 var PRECISION = 30;
+
+var boxA;
+var boxB;
+var speedAX;
+var speedAY;
+var speedBX;
+var speedBY
+var frameZero;
 
 $(function() {
     var two = new Two({
@@ -35,6 +48,37 @@ $(function() {
 
     $window = $(window).bind('mousemove.userDrawing', redraw).bind('click.userDrawing', addPoint);
 
+    function redraw(e)
+    {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+
+        if (origin.distanceTo(mouse) > PRECISION)
+        {
+            polyCurr.opacity = POLY_HALF_OPACITY;
+            polyCurr.vertices[polyCurr.vertices.length-1].x = mouse.x; // TODO fix error
+            polyCurr.vertices[polyCurr.vertices.length-1].y = mouse.y;
+        }
+        else
+        {
+            polyCurr.opacity = 1;
+            polyCurr.vertices[polyCurr.vertices.length-1].x = polyCurr.vertices[polyCurr.vertices.length-2].x;
+            polyCurr.vertices[polyCurr.vertices.length-1].y = polyCurr.vertices[polyCurr.vertices.length-2].y;
+        }
+
+        if(isValidPoly = PolyK.IsSimple(toPolyK(polyCurr)) || origin.distanceTo(mouse) <= PRECISION )
+        {
+            polyA.fill = POLY_A_COLOR;
+            polyB.fill = POLY_B_COLOR;
+        }
+        else
+        {
+            polyCurr.fill = POLY_ERR_COLOR;
+        }
+
+        two.update();
+    }
+
     function addPoint(e)
     {
         redraw(e);
@@ -56,12 +100,12 @@ $(function() {
                     {
                         // start drawing second poly
                         polyCurr = polyB;
-                        origin = new Two.Anchor(0.0);
+                        origin = new Two.Anchor(0,0);
                     }
                     else
                     {
                         $window.unbind('.userDrawing'); // input completed
-                        two.bind('update', reposition).play();
+                        two.bind('update', rescale).play();
                     }
                 }
             }
@@ -80,6 +124,123 @@ $(function() {
         }
     }
 
+    function rescale(frameCount)
+    {
+        var polyKA = toPolyK(polyA);
+        var polyKB = toPolyK(polyB);
+        var areaA = Math.abs(PolyK.GetArea(polyKA));
+        var areaB = Math.abs(PolyK.GetArea(polyKB));
+        var changeA = false;
+        var changeB = false;
+
+        if (Math.abs(areaA-AREA) > EPSILON)
+        {
+            var alpha = areaA > AREA ? 1-ALPHA : 1+ALPHA;
+            polyKA = PolyK.scale(polyKA,alpha,alpha);
+            changeA = true;
+        }
+        if (Math.abs(areaB-AREA) > EPSILON)
+        {
+            var alpha = areaB > AREA ? 1-ALPHA : 1+ALPHA;
+            polyKB = PolyK.scale(polyKB,alpha,alpha);
+            changeB = true;
+
+        }
+
+        if(changeA)
+        {
+            two.remove(polyA);
+            polyA = makePoly(polyKA);
+            polyA.fill = POLY_A_COLOR;
+            polyA.noStroke();
+        }
+        if(changeB)
+        {
+            changeB = true;
+            two.remove(polyB);
+            polyB = makePoly(polyKB);
+            polyB.fill = POLY_B_COLOR;
+            polyB.noStroke();
+        }
+
+        if (!changeA && !changeB)
+        {
+            two.unbind('update', rescale);
+
+            boxA = PolyK.GetAABB(polyKA);
+            boxB = PolyK.GetAABB(polyKB);
+            speedAX = -boxA.x / TRANSLATION_TIME;
+            speedAY = -boxA.y / TRANSLATION_TIME;
+            speedBX = -(boxB.x - boxA.width - PADDING) / TRANSLATION_TIME;
+            speedBY = -boxB.y / TRANSLATION_TIME;
+
+            frameZero = frameCount
+            two.bind('update', reposition);
+        }
+    }
+
+    function reposition(frameCount)
+    {
+        if (frameCount-frameZero < TRANSLATION_TIME)
+        {
+            var polyKA = toPolyK(polyA);
+            var polyKB = toPolyK(polyB);
+            var changeA = false;
+            var changeB = false;
+            polyKA = PolyK.translate(polyKA, speedAX, speedAY)
+            polyKB = PolyK.translate(polyKB, speedBX, speedBY)
+
+            two.remove(polyA);
+            polyA = makePoly(polyKA);
+            polyA.fill = POLY_A_COLOR;
+            polyA.noStroke();
+
+            changeB = true;
+            two.remove(polyB);
+            polyB = makePoly(polyKB);
+            polyB.fill = POLY_B_COLOR;
+            polyB.noStroke();
+
+            boxA = PolyK.GetAABB(polyKA);
+            boxB = PolyK.GetAABB(polyKB);
+        }
+        else
+        {
+            two.unbind('update', reposition);
+            // two.bind('update', triangulate);
+            triangulate();
+            frameZero = frameCount
+        }
+    }
+
+    function triangulate(frameCount)
+    {
+        var polyKA = toPolyK(polyA);
+        var polyKB = toPolyK(polyB);
+
+        var trA = PolyK.Triangulate(polyKA);
+        for(var i = 0; i < trA.length; i+=3)
+        {
+            var triangle = [polyKA[trA[i]*2], polyKA[trA[i]*2+1],
+                polyKA[trA[i+1]*2], polyKA[trA[i+1]*2+1],
+                polyKA[trA[i+2]*2], polyKA[trA[i+2]*2+1]];
+            var t = makePoly(triangle);
+            t.fill = POLY_A_COLOR
+        }
+        two.remove(polyA);
+
+        var trB = PolyK.Triangulate(polyKB);
+        for(var i = 0; i < trA.length; i+=3)
+        {
+            var triangle = [polyKB[trA[i]*2], polyKB[trA[i]*2+1],
+                polyKB[trB[i+1]*2], polyKB[trB[i+1]*2+1],
+                polyKB[trB[i+2]*2], polyKB[trB[i+2]*2+1]];
+            var t = makePoly(triangle);
+            t.fill = POLY_B_COLOR
+        }
+        two.remove(polyB);
+    }
+
     function makePoly(p) {
         points = [];
         for (var i = 0; i < p.length; i+=2) {
@@ -93,67 +254,6 @@ $(function() {
         two.scene.add(path);
 
         return path;
-    }
-
-    function reposition(frameCount)
-    {
-        polyKA = toPolyK(polyA);
-        polyKB = toPolyK(polyB);
-        areaA = Math.abs(PolyK.GetArea(polyKA));
-        areaB = Math.abs(PolyK.GetArea(polyKB));
-        console.log(areaA);
-
-        area = 10000;
-        epsilon = 1;
-        if (Math.abs(areaA-area) > epsilon)
-        {
-            alpha = areaA > area ? 0.99 : 1.01;
-            p = PolyK.scale(toPolyK(polyA),alpha,alpha);
-            two.remove(polyA);
-            polyA = makePoly(p);
-            polyA.fill = POLY_A_COLOR;
-            polyA.noStroke();
-        }
-        if (Math.abs(areaB-area) > epsilon)
-        {
-            alpha = areaB > area ? 0.99 : 1.01;
-            p = PolyK.scale(toPolyK(polyB),alpha,alpha);
-            two.remove(polyB);
-            polyB = makePoly(p);
-            polyB.fill = POLY_B_COLOR;
-            polyB.noStroke();
-        }
-    }
-
-    function redraw(e)
-    {
-        mouse.x = e.clientX;
-        mouse.y = e.clientY;
-
-        if (origin.distanceTo(mouse) > PRECISION)
-        {
-            polyCurr.opacity = POLY_HALF_OPACITY;
-            polyCurr.vertices[polyCurr.vertices.length-1].x = mouse.x;
-            polyCurr.vertices[polyCurr.vertices.length-1].y = mouse.y;
-        }
-        else
-        {
-            polyCurr.opacity = 1;
-            polyCurr.vertices[polyCurr.vertices.length-1].x = polyCurr.vertices[polyCurr.vertices.length-2].x;
-            polyCurr.vertices[polyCurr.vertices.length-1].y = polyCurr.vertices[polyCurr.vertices.length-2].y;
-        }
-
-        if(isValidPoly = PolyK.IsSimple(toPolyK(polyCurr)) || origin.distanceTo(mouse) <= PRECISION )
-        {
-            polyA.fill = POLY_A_COLOR;
-            polyB.fill = POLY_B_COLOR;
-        }
-        else
-        {
-            polyCurr.fill = POLY_ERR_COLOR;
-        }
-
-        two.update();
     }
 });
 
