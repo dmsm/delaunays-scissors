@@ -61,6 +61,7 @@ $(function() {
                     else
                     {
                         $window.unbind('.userDrawing'); // input completed
+                        two.bind('update', reposition).play();
                     }
                 }
             }
@@ -76,6 +77,51 @@ $(function() {
             }
 
             two.update();
+        }
+    }
+
+    function makePoly(p) {
+        points = [];
+        for (var i = 0; i < p.length; i+=2) {
+            var x = p[i];
+            var y = p[i + 1];
+            points.push(new Two.Anchor(x, y));
+        }
+
+        var path = new Two.Path(points);
+
+        two.scene.add(path);
+
+        return path;
+    }
+
+    function reposition(frameCount)
+    {
+        polyKA = toPolyK(polyA);
+        polyKB = toPolyK(polyB);
+        areaA = Math.abs(PolyK.GetArea(polyKA));
+        areaB = Math.abs(PolyK.GetArea(polyKB));
+        console.log(areaA);
+
+        area = 10000;
+        epsilon = 1;
+        if (Math.abs(areaA-area) > epsilon)
+        {
+            alpha = areaA > area ? 0.99 : 1.01;
+            p = PolyK.scale(toPolyK(polyA),alpha,alpha);
+            two.remove(polyA);
+            polyA = makePoly(p);
+            polyA.fill = POLY_A_COLOR;
+            polyA.noStroke();
+        }
+        if (Math.abs(areaB-area) > epsilon)
+        {
+            alpha = areaB > area ? 0.99 : 1.01;
+            p = PolyK.scale(toPolyK(polyB),alpha,alpha);
+            two.remove(polyB);
+            polyB = makePoly(p);
+            polyB.fill = POLY_B_COLOR;
+            polyB.noStroke();
         }
     }
 

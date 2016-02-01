@@ -1,0 +1,6 @@
+for polygons:
+	implement translation/rotation/scaling
+for triangles:
+	triangle -> rectangle
+for rectangles:
+	rectangle -> rectangle
