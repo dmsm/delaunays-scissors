@@ -31,12 +31,12 @@ $(function() {
     }).appendTo(document.body);
     var mouse = new Two.Anchor(0,0);
 
-    var t = [450,450,600,450,500,500];
-    var triangle = makePoly(t);
-    triangle.fill = POLY_A_COLOR
-    var triangle2 = makePoly(straightenTri(t));
-    var r = makeRect(t);
-    r.fill = POLY_B_COLOR;
+    var triangle = makePoly([150,50,510,100,300,500])
+    two.add(straightenTri(triangle));
+    var rectangle = makeRect(triangle);
+    rectangle.fill = POLY_B_COLOR; 
+    two.add(rectangle);
+    two.update();
 
     var polyA = two.makePath(0,0).noStroke();
     polyA.fill = POLY_A_COLOR;
@@ -168,6 +168,7 @@ $(function() {
             polyA = makePoly(polyKA);
             polyA.noStroke();
             polyA.fill = POLY_A_COLOR;
+            two.add(polyA);
         }
         if(changeB)
         {
@@ -176,6 +177,7 @@ $(function() {
             polyB = makePoly(polyKB);
             polyB.noStroke();
             polyB.fill = POLY_B_COLOR;
+            two.add(polyB);
         }
 
         if (!changeA && !changeB)
@@ -209,12 +211,14 @@ $(function() {
             polyA = makePoly(polyKA);
             polyA.fill = POLY_A_COLOR;
             polyA.noStroke();
+            two.add(polyA);
 
             changeB = true;
             two.remove(polyB);
             polyB = makePoly(polyKB);
             polyB.fill = POLY_B_COLOR;
             polyB.noStroke();
+            two.add(polyB);
 
             boxA = PolyK.GetAABB(polyKA);
             boxB = PolyK.GetAABB(polyKB);
@@ -240,21 +244,12 @@ $(function() {
                 polyKA[trA[i+2]*2], polyKA[trA[i+2]*2+1]];
             var t = makePoly(triangle);
             t.fill = POLY_A_COLOR;
-            trisA.push(t);
+            trisA.push(permute(t));
+            two.add(straightenTri(t));
         }
         two.remove(polyA);
 
-        var trB = PolyK.Triangulate(polyKB);
-        trisB = trB;
-        for(var i = 0; i < trB.length; i+=3)
-        {
-            var triangle = [polyKB[trB[i]*2], polyKB[trB[i]*2+1],
-                polyKB[trB[i+1]*2], polyKB[trB[i+1]*2+1],
-                polyKB[trB[i+2]*2], polyKB[trB[i+2]*2+1]];
-            var t = makePoly(triangle);
-            t.fill = POLY_B_COLOR;
-        }
-        two.remove(polyB);
+        trisB = PolyK.Triangulate(polyKB);
     }
 
     function makePoly(p) {
@@ -266,47 +261,81 @@ $(function() {
         }
 
         var path = new Two.Path(points, true);
-        two.scene.add(path);
 
         return path;
 
     }
 
-    function makeRect(p)
+    function makeRect(t)
     {
-        p = straightenTri(p);
-        var ls = getLongestSide(p);
-        var Y = (p[ls[2]*2+1]+p[ls[0]*2+1])/2;
-        var leftX = (p[ls[2]*2]+p[ls[0]*2])/2;
-        var rightX = (p[ls[2]*2]+p[ls[1]*2])/2;
-        return makePoly([p[ls[0]*2],p[ls[0]*2+1], leftX, Y, rightX, Y, p[ls[1]*2],p[ls[1]*2+1]]);
+        t = straightenTri(t);
+        var a = t.vertices[0];
+        var b = t.vertices[1];
+        var c = t.vertices[2];
+        var Y = (c.y+a.y)/2;
+        var rightX = (c.x+a.x)/2;
+        var leftX = (c.x+b.x)/2;
+
+        var lt = [c.x, Y, leftX, Y, c.x, c.y];
+        lt = PolyK.rotate(lt, Math.PI);
+        var lbox = PolyK.GetAABB(lt);
+        lt = PolyK.translate(lt, -lbox.width, lbox.height); 
+        var leftTri = makePoly(lt);
+        leftTri.fill = POLY_A_COLOR;
+
+        var rt = [rightX, Y, c.x, Y, c.x, c.y];
+        rt = PolyK.rotate(rt, Math.PI);
+        var rbox = PolyK.GetAABB(rt);
+        rt = PolyK.translate(rt, rbox.width, rbox.height); 
+        var rightTri = makePoly(rt);
+        rightTri.fill = POLY_A_COLOR;
+
+        two.add(leftTri);
+        two.add(rightTri);
+
+        return makePoly([a.x, a.y, b.x, b.y, leftX, Y, rightX, Y]);
     }
 
-    function straightenTri(p)
+    function straightenTri(t)
     {
-        var ls = getLongestSide(p);
-        var theta = Math.atan((p[ls[1]*2+1]-p[ls[0]*2+1])/(p[ls[1]*2]-p[ls[0]*2]));
-        if (p[ls[2]*2+1] > p[ls[0]*2+1])
+        var a = t.vertices[0];
+        var b = t.vertices[1];
+        var c = t.vertices[2];
+        var theta = Math.atan((b.y-a.y)/(b.x-a.x));
+        var p = PolyK.rotate(toPolyK(t), theta);
+        if (p[5] > p[1])
         {
-            theta += Math.PI;
+            p = PolyK.rotate(p, Math.PI);
         }
-        return PolyK.rotate(p, theta);
+        return makePoly(p);
     }
 
-    function getLongestSide(p)
+    function permute(t)
     {
-        var a = new Two.Anchor(p[0], p[1]);
-        var b = new Two.Anchor(p[2], p[3]);
-        var c = new Two.Anchor(p[4], p[5]);
-        ab = a.distanceTo(b);
-        ac = a.distanceTo(c);
-        bc = b.distanceTo(c);
+        var a = t.vertices[0];
+        var b = t.vertices[1];
+        var c = t.vertices[2];
+        var ab = a.distanceTo(b);
+        var ac = a.distanceTo(c);
+        var bc = b.distanceTo(c);
         var max = Math.max(ab, ac, bc);
-        var longest;
-        if (max == ab) longest = [0,1,2];
-        else if (max == ac) longest = [0,2,1];
-        else longest = [1,2,0];
-        return longest;
+       
+        var perm;
+        if (max == ab)
+        {
+            perm = [a,b,c];
+        }
+        else if (max == ac)
+        {
+            perm = [c,a,b];
+        }
+        else
+        {
+            perm = [b,c,a];
+        }
+
+        t.vertices = perm;
+        return t;
     }
 
     function toPolyK(p)
