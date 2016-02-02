@@ -20,7 +20,9 @@ PolyK.rotate = function(p, theta)
     var box = PolyK.GetAABB(p);
     p = PolyK.translate(p, -box.x-box.width/2, -box.y-box.height/2);
     var A = [[math.cos(theta), -math.sin(theta)], [math.sin(theta), math.cos(theta)]];
-    return PolyK.flatten(math.multiply(PolyK.unflatten(p), A));
+    p = math.multiply(PolyK.unflatten(p), A)
+    p = PolyK.translate(PolyK.flatten(p), box.x+box.width/2, box.y+box.height/2);
+    return p;
 }
 
 PolyK.unflatten = function(p)

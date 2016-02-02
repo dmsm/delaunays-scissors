@@ -31,6 +31,13 @@ $(function() {
     }).appendTo(document.body);
     var mouse = new Two.Anchor(0,0);
 
+    var t = [450,450,600,450,500,500];
+    var triangle = makePoly(t);
+    triangle.fill = POLY_A_COLOR
+    var triangle2 = makePoly(straightenTri(t));
+    var r = makeRect(t);
+    r.fill = POLY_B_COLOR;
+
     var polyA = two.makePath(0,0).noStroke();
     polyA.fill = POLY_A_COLOR;
     polyA.opacity = POLY_HALF_OPACITY;
@@ -40,6 +47,9 @@ $(function() {
     polyB.opacity = POLY_HALF_OPACITY;
 
     var polyCurr = polyA;
+
+    var trisA = [];
+    var trisB;
 
     var dot; // marks the start vertex
     var isValidPoly = true; // none of the edges cross each other
@@ -55,15 +65,9 @@ $(function() {
         if (origin.distanceTo(mouse) > PRECISION)
         {
             polyCurr.opacity = POLY_HALF_OPACITY;
-            try {
-                polyCurr.vertices[polyCurr.vertices.length-1].x = mouse.x; // TODO fix error
-                polyCurr.vertices[polyCurr.vertices.length-1].y = mouse.y;
-            }
-            catch (err) {
-                console.log(err);
-                console.log(polyCurr.vertices);
-                console.log(mouse);
-            }
+
+            polyCurr.vertices.pop();
+            polyCurr.vertices.push(new Two.Anchor(mouse.x, mouse.y));
         }
         else
         {
@@ -235,18 +239,20 @@ $(function() {
                 polyKA[trA[i+1]*2], polyKA[trA[i+1]*2+1],
                 polyKA[trA[i+2]*2], polyKA[trA[i+2]*2+1]];
             var t = makePoly(triangle);
-            t.fill = POLY_A_COLOR
+            t.fill = POLY_A_COLOR;
+            trisA.push(t);
         }
         two.remove(polyA);
 
         var trB = PolyK.Triangulate(polyKB);
-        for(var i = 0; i < trA.length; i+=3)
+        trisB = trB;
+        for(var i = 0; i < trB.length; i+=3)
         {
             var triangle = [polyKB[trB[i]*2], polyKB[trB[i]*2+1],
                 polyKB[trB[i+1]*2], polyKB[trB[i+1]*2+1],
                 polyKB[trB[i+2]*2], polyKB[trB[i+2]*2+1]];
             var t = makePoly(triangle);
-            t.fill = POLY_B_COLOR
+            t.fill = POLY_B_COLOR;
         }
         two.remove(polyB);
     }
@@ -265,11 +271,52 @@ $(function() {
         return path;
 
     }
+
+    function makeRect(p)
+    {
+        p = straightenTri(p);
+        var ls = getLongestSide(p);
+        var Y = (p[ls[2]*2+1]+p[ls[0]*2+1])/2;
+        var leftX = (p[ls[2]*2]+p[ls[0]*2])/2;
+        var rightX = (p[ls[2]*2]+p[ls[1]*2])/2;
+        return makePoly([p[ls[0]*2],p[ls[0]*2+1], leftX, Y, rightX, Y, p[ls[1]*2],p[ls[1]*2+1]]);
+    }
+
+    function straightenTri(p)
+    {
+        var ls = getLongestSide(p);
+        var theta = Math.atan((p[ls[1]*2+1]-p[ls[0]*2+1])/(p[ls[1]*2]-p[ls[0]*2]));
+        if (p[ls[2]*2+1] > p[ls[0]*2+1])
+        {
+            theta += Math.PI;
+        }
+        return PolyK.rotate(p, theta);
+    }
+
+    function getLongestSide(p)
+    {
+        var a = new Two.Anchor(p[0], p[1]);
+        var b = new Two.Anchor(p[2], p[3]);
+        var c = new Two.Anchor(p[4], p[5]);
+        ab = a.distanceTo(b);
+        ac = a.distanceTo(c);
+        bc = b.distanceTo(c);
+        var max = Math.max(ab, ac, bc);
+        var longest;
+        if (max == ab) longest = [0,1,2];
+        else if (max == ac) longest = [0,2,1];
+        else longest = [1,2,0];
+        return longest;
+    }
+
+    function toPolyK(p)
+    {
+        return $.map(p.vertices, function(v) {
+            return [v.x, v.y];
+        })
+    }
 });
 
-function toPolyK(p)
-{
-    return $.map(p.vertices, function(v) {
-        return [v.x, v.y];
-    })
-}
+
+
+
