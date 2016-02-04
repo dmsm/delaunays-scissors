@@ -1,5 +1,5 @@
 rescale both poly's in equal time period
-for triangles:
-	triangle -> rectangle
+find scaling factor using dimensions
+fix rescale
 for rectangles:
 	rectangle -> rectangles

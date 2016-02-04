@@ -1,0 +1,51 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function straightenTri(p)
+{
+    var ls = getLongestSide(p);
+    var theta = Math.atan((ls[1].y-ls[0].y)/(ls[1].x-ls[0].x));
+    return PolyK.rotate(p, theta);
+}
+
+function getLongestSide(p)
+{
+    var a = new Two.Anchor(p[0], p[1]);
+    var b = new Two.Anchor(p[2], p[3]);
+    var c = new Two.Anchor(p[4], p[5]);
+    ab = a.distanceTo(b);
+    ac = a.distanceTo(c);
+    bc = b.distanceTo(c);
+    var max = Math.max(ab, ac, bc);
+    var longest;
+    if (max == ab) longest = [a,b];
+    else if (max == ac) longest = [a,c];
+    else longest = [b,c];
+    return longest;
+}

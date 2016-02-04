@@ -11,8 +11,9 @@ var POLY_HALF_OPACITY = 0.6;
 var AREA = 30000;
 var EPSILON = 300;
 var ALPHA = 0.01;
-var TRANSLATION_TIME = 100;
+var TRANSLATION_TIME = 30;
 var PADDING = 50;
+var UNIT_WIDTH = 200;
 
  // max distance from start vertex at which we close poly
 var PRECISION = 30;
@@ -23,7 +24,7 @@ var speedAX;
 var speedAY;
 var speedBX;
 var speedBY
-var frameZero;
+var frameZero=0;
 
 $(function() {
     var two = new Two({
@@ -31,11 +32,15 @@ $(function() {
     }).appendTo(document.body);
     var mouse = new Two.Anchor(0,0);
 
-    var triangle = makePoly([150,50,510,100,300,500])
-    two.add(straightenTri(triangle));
-    var rectangle = makeRect(triangle);
-    rectangle.fill = POLY_B_COLOR; 
-    two.add(rectangle);
+    // var triangle = straightenTri(makePoly([150,50,510,100,300,500]));
+    // triangle.fill = POLY_B_COLOR;
+    // two.add(triangle);
+    // makeRect(triangle);
+    // two.update();
+    var rect = makePoly([50,300,50,310,1850,310,1850,300]);
+    rect.fill=POLY_A_COLOR;
+    two.add(rect);
+    normalizeRect(rect);
     two.update();
 
     var polyA = two.makePath(0,0).noStroke();
@@ -139,6 +144,71 @@ $(function() {
         }
     }
 
+    function normalizeRect(p, callback)
+    {
+        var box = PolyK.GetAABB(toPolyK(p));
+        if (box.width >= UNIT_WIDTH)
+        {
+            stack(p);
+        }
+        else
+        {
+            var normalH = PolyK.GetArea(toPolyK(p)) / UNIT_WIDTH;
+
+            var penta = makePoly([box.x, box.y+box.height-normalH, box.x, box.y+box.height, box.x+box.width, box.y+box.height, box.x+UNIT_WIDTH*normalH/box.height, box.y+normalH, box.x+(box.height-normalH)*UNIT_WIDTH/box.height, box.y+box.height-normalH]);
+            penta.fill = p.fill;
+            two.add(penta);
+
+            var smallTri = makePoly([box.x, box.y, box.x, box.y+box.height-normalH, box.x+(box.height-normalH)*UNIT_WIDTH/box.height, box.y+box.height-normalH]);
+            smallTri.fill = p.fill;
+            two.add(smallTri);
+
+            var bigTri = makePoly([box.x, box.y, box.x+box.width, box.y, box.x+UNIT_WIDTH*normalH/box.height, box.y+normalH]);
+            bigTri.fill = p.fill;
+            two.add(bigTri);
+
+            two.remove(p);
+
+            two.bind('update', move(smallTri, 30, UNIT_WIDTH*normalH/box.height, normalH, function() {
+                two.bind('update', move(bigTri, 30, (box.height-normalH)*UNIT_WIDTH/box.height, box.height-normalH, function() {
+                    two.remove(smallTri, bigTri, penta);
+                    var normalRect = makePoly([box.x, box.y+box.height-normalH, box.x+UNIT_WIDTH, box.y+box.height-normalH, box.x+UNIT_WIDTH, box.y+box.height, box.x, box.y+box.height]);
+                    normalRect.fill = p.fill;
+                    two.add(normalRect);
+                    p = normalRect;
+                })).play();
+            })).play();
+        }
+    }
+
+    function stack(p, callback)
+    {
+        var box = PolyK.GetAABB(toPolyK(p));
+        var pivotX = box.x+box.width/2;
+        var pivotY = box.y;
+        
+        var left = makePoly([pivotX, pivotY, box.x, box.y, box.x, box.y+box.height, pivotX, box.y+box.height]);
+        left.fill = p.fill;
+        two.add(left);
+
+        var right = makePoly([pivotX, pivotY, box.x+box.width, box.y, box.x+box.width, box.y+box.height, pivotX, box.y+box.height]);
+        right.fill = p.fill;
+        two.add(right);
+
+        two.remove(p);
+
+        two.bind('update', rotate(right, 60, Math.PI, true, pivotX, pivotY, function() {
+            two.remove(left, right);
+            var rect = makePoly([box.x, box.y-box.height, pivotX, box.y-box.height, pivotX, box.y+box.height, box.x, box.y+box.height]);
+            rect.fill = p.fill;
+            two.add(rect);
+            p = rect;
+            if (callback) normalizeRect(p, callback);
+            else normalizeRect(p);
+        })).play();
+
+    }
+
     function rescale(frameCount)
     {
         var polyKA = toPolyK(polyA);
@@ -182,52 +252,21 @@ $(function() {
 
         if (!changeA && !changeB)
         {
-            two.unbind('update', rescale);
+            two.unbind('update', rescale).pause();
 
+            frameZero = frameCount;
             boxA = PolyK.GetAABB(polyKA);
             boxB = PolyK.GetAABB(polyKB);
-            speedAX = -boxA.x / TRANSLATION_TIME;
-            speedAY = -boxA.y / TRANSLATION_TIME;
-            speedBX = -(boxB.x - boxA.width - PADDING) / TRANSLATION_TIME;
-            speedBY = -boxB.y / TRANSLATION_TIME;
-
-            frameZero = frameCount
-            two.bind('update', reposition);
-        }
-    }
-
-    function reposition(frameCount)
-    {
-        if (frameCount-frameZero < TRANSLATION_TIME)
-        {
-            var polyKA = toPolyK(polyA);
-            var polyKB = toPolyK(polyB);
-            var changeA = false;
-            var changeB = false;
-            polyKA = PolyK.translate(polyKA, speedAX, speedAY)
-            polyKB = PolyK.translate(polyKB, speedBX, speedBY)
-
-            two.remove(polyA);
-            polyA = makePoly(polyKA);
-            polyA.fill = POLY_A_COLOR;
-            polyA.noStroke();
-            two.add(polyA);
-
-            changeB = true;
-            two.remove(polyB);
-            polyB = makePoly(polyKB);
-            polyB.fill = POLY_B_COLOR;
-            polyB.noStroke();
-            two.add(polyB);
-
-            boxA = PolyK.GetAABB(polyKA);
-            boxB = PolyK.GetAABB(polyKB);
-        }
-        else
-        {
-            two.unbind('update', reposition);
-            frameZero = frameCount
-            triangulate();
+            two.bind('update', move(polyA, TRANSLATION_TIME, -boxA.x, -boxA.y, function() {
+                two.bind('update', move(polyB, TRANSLATION_TIME, -(boxB.x - boxA.width - PADDING), -boxB.y, function() {
+                    triangulate();
+                    for (var i = 0; i < trisA.length; i++)
+                    {
+                        straightenTri(trisA[i]);
+                        makeRect(trisA[i]);
+                    }
+                })).play();
+            })).play();
         }
     }
 
@@ -245,7 +284,7 @@ $(function() {
             var t = makePoly(triangle);
             t.fill = POLY_A_COLOR;
             trisA.push(permute(t));
-            two.add(straightenTri(t));
+            two.add(t);
         }
         two.remove(polyA);
 
@@ -266,9 +305,11 @@ $(function() {
 
     }
 
-    function makeRect(t)
+    function makeRect(t, callback)
     {
-        t = straightenTri(t);
+        var color = t.fill;
+        two.remove(t);
+
         var a = t.vertices[0];
         var b = t.vertices[1];
         var c = t.vertices[2];
@@ -276,24 +317,42 @@ $(function() {
         var rightX = (c.x+a.x)/2;
         var leftX = (c.x+b.x)/2;
 
+        var trap = makePoly([a.x, a.y, b.x, b.y, leftX, Y, rightX, Y]);
+        trap.fill = color;
+        two.add(trap);
+
         var lt = [c.x, Y, leftX, Y, c.x, c.y];
-        lt = PolyK.rotate(lt, Math.PI);
         var lbox = PolyK.GetAABB(lt);
-        lt = PolyK.translate(lt, -lbox.width, lbox.height); 
         var leftTri = makePoly(lt);
-        leftTri.fill = POLY_A_COLOR;
+        leftTri.fill = color;
+        two.add(leftTri);
 
         var rt = [rightX, Y, c.x, Y, c.x, c.y];
-        rt = PolyK.rotate(rt, Math.PI);
         var rbox = PolyK.GetAABB(rt);
-        rt = PolyK.translate(rt, rbox.width, rbox.height); 
         var rightTri = makePoly(rt);
-        rightTri.fill = POLY_A_COLOR;
+        rightTri.fill = color;
+        two.add(rightTri)
 
-        two.add(leftTri);
-        two.add(rightTri);
+        two.bind('update', rotate(leftTri, 60,Math.PI, true, leftX, Y, function() {
+                two.bind('update', rotate(rightTri, 60,Math.PI, false, rightX, Y, function() {
+                    two.remove(trap, rightTri, leftTri);
+                    var rect = makePoly([a.x, a.y, a.x, Y, b.x, Y, b.x, b.y]);
+                    rect.fill = color;
+                    two.add(rect);
+                    t = rect;
+                    if(callback) callback();
+                })).play();
+            })).play();
+    }
 
-        return makePoly([a.x, a.y, b.x, b.y, leftX, Y, rightX, Y]);
+    function makeVertices(p)
+    {
+        v = [];
+        for(var i = 0; i < p.length; i += 2)
+        {
+            v.push(new Two.Anchor(p[i], p[i+1]));
+        }
+        return v;
     }
 
     function straightenTri(t)
@@ -307,7 +366,8 @@ $(function() {
         {
             p = PolyK.rotate(p, Math.PI);
         }
-        return makePoly(p);
+        t.vertices = makeVertices(p);
+        return t;
     }
 
     function permute(t)
@@ -343,6 +403,44 @@ $(function() {
         return $.map(p.vertices, function(v) {
             return [v.x, v.y];
         })
+    }
+
+    function move(p, frames, x, y, callback)
+    {
+        var speedX = x / frames;
+        var speedY = y / frames;
+
+        return function(frameCount) {
+            if (frameCount-frameZero <= frames)
+            {
+                p.vertices = makeVertices(PolyK.translate(toPolyK(p), speedX, speedY));
+            }
+            else
+            {
+                two.unbind('update', arguments.callee).pause();
+                frameZero = frameCount
+                if(callback) callback();
+            }
+        }
+    }
+
+    function rotate(p, frames, theta, ccw, x, y, callback)
+    {
+        var speedTheta = theta / frames;
+        if (!ccw) speedTheta *= -1;
+
+        return function(frameCount) {
+            if (frameCount-frameZero <= frames)
+            {
+                p.vertices = makeVertices(PolyK.rotate(toPolyK(p), speedTheta, x, y));
+            }
+            else
+            {
+                two.unbind('update', arguments.callee).pause();
+                frameZero = frameCount
+                if(callback) callback();
+            }
+        }
     }
 });
 
