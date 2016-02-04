@@ -8,10 +8,10 @@ var POLY_A_COLOR = '#00BBFF';
 var POLY_B_COLOR = '#1AA130';
 var POLY_ERR_COLOR = '#A31D46';
 var POLY_HALF_OPACITY = 0.6;
-var AREA = 30000;
-var EPSILON = 300;
+var MAX_H = 500;
+var MAX_W = 500;
 var ALPHA = 0.01;
-var TRANSLATION_TIME = 30;
+var ANIMATION_TIME = 40;
 var PADDING = 50;
 var UNIT_WIDTH = 200;
 
@@ -29,7 +29,7 @@ $(function() {
     var two = new Two({
         fullscreen: true
     }).appendTo(document.body);
-    var mouse = new Two.Anchor(0,0);
+    var mouse = new Two.Anchor(two.width/2, two.height/2);
 
     // var triangle = straightenTri(makePoly([150,50,510,100,300,500]));
     // triangle.fill = POLY_B_COLOR;
@@ -55,9 +55,14 @@ $(function() {
     var trisA = [];
     var trisB;
 
-    var dot; // marks the start vertex
+     // marks the start vertex
+    dot = two.makeCircle(two.width/2, two.height/2, PRECISION).noStroke();
+    dot.fill = DOT_COLOR;
+    dot.opacity = DOT_OPACITY;
+    two.update();
+
     var isValidPoly = true; // none of the edges cross each other
-    var origin = new Two.Anchor(0,0);
+    var origin = new Two.Anchor(two.width/2, two.height/2);
 
     $window = $(window).bind('mousemove.userDrawing', redraw).bind('click.userDrawing', addPoint);
 
@@ -121,6 +126,8 @@ $(function() {
                 if (origin.distanceTo(mouse) > PRECISION)
                 {
                     polyCurr.vertices.push(mouse.clone()); // add a vertex
+
+                    redraw(e);
                 }
                 else if(polyCurr.vertices.length > 3)
                 {
@@ -146,22 +153,26 @@ $(function() {
 
                         var areaA = PolyK.GetArea(toPolyK(polyA));
                         var areaB = PolyK.GetArea(toPolyK(polyB));
+                        var area = calculateArea(polyA, polyB);
                         
                         two.frameCount = 0;
 
-                        two.bind('update', scale(polyA, 30, AREA/areaA)).play();
-                        two.bind('update', scale(polyB, 30, AREA/areaB, function() {
+                        two.bind('update', scale(polyA, 30, area/areaA)).play();
+                        two.bind('update', scale(polyB, 30, area/areaB, function() {
 
                             var boxA = PolyK.GetAABB(toPolyK(polyA));
                             var boxB = PolyK.GetAABB(toPolyK(polyB));
 
-                            two.bind('update', translate(polyA, TRANSLATION_TIME, -boxA.x, -boxA.y)).play();
-                            two.bind('update', translate(polyB, TRANSLATION_TIME, -(boxB.x - boxA.width - PADDING), -boxB.y, function() {
+                            two.bind('update', translate(polyA, ANIMATION_TIME, -boxA.x, -boxA.y)).play();
+                            two.bind('update', translate(polyB, ANIMATION_TIME, -(boxB.x - boxA.width - PADDING), -boxB.y, function() {
                                 triangulate();
                                 for (var i = 0; i < trisA.length; i++)
                                 {
-                                    straightenTri(trisA[i]);
-                                    triToRect(trisA[i]);
+                                    straightenTri(trisA[i], function(){
+                                        // triToRect(trisA[i], function() {
+                                        //     normalizeRect(trisA[i]);
+                                        // });
+                                    });
                                 }
                             })).play();
                         })).play();
@@ -174,10 +185,43 @@ $(function() {
                 origin = polyCurr.vertices[polyCurr.vertices.length-1];
 
                 polyCurr.vertices.push(mouse.clone());
-            }
 
-            two.update();
+                redraw(e);
+            }
         }
+    }
+
+    function calculateArea(a, b)
+    {
+        var kA = toPolyK(a);
+        var kB = toPolyK(b);
+
+        var boxA = PolyK.GetAABB(kA);
+        var boxB = PolyK.GetAABB(kB);
+
+        while (boxA.width > MAX_W || boxA.height > MAX_H)
+        {
+            kA = PolyK.scale(kA, 1-ALPHA, 1-ALPHA);
+            boxA = PolyK.GetAABB(kA);
+        }
+        while (boxA.width < MAX_W && boxA.height < MAX_H)
+        {
+            kA = PolyK.scale(kA, 1+ALPHA, 1+ALPHA);
+            boxA = PolyK.GetAABB(kA);
+        }
+
+        while (boxB.width > MAX_W || boxB.height > MAX_H)
+        {
+            kB = PolyK.scale(kB, 1-ALPHA, 1-ALPHA);
+            boxB = PolyK.GetAABB(kB);
+        }
+        while (boxB.width < MAX_W && boxB.height < MAX_H)
+        {
+            kB = PolyK.scale(kB, 1+ALPHA, 1+ALPHA);
+            boxB = PolyK.GetAABB(kB);
+        }
+
+        return Math.min(PolyK.GetArea(kA), PolyK.GetArea(kB))
     }
 
     function normalizeRect(p, callback)
@@ -233,7 +277,7 @@ $(function() {
 
         two.remove(p);
 
-        two.bind('update', rotate(right, 60, Math.PI, true, pivotX, pivotY, function() {
+        two.bind('update', rotate(right, ANIMATION_TIME, Math.PI, true, pivotX, pivotY, function() {
             two.remove(left, right);
             var rect = makePoly([box.x, box.y-box.height, pivotX, box.y-box.height, pivotX, box.y+box.height, box.x, box.y+box.height]);
             rect.fill = p.fill;
@@ -308,8 +352,8 @@ $(function() {
         rightTri.fill = color;
         two.add(rightTri)
 
-        two.bind('update', rotate(leftTri, 60,Math.PI, true, leftX, Y, function() {
-                two.bind('update', rotate(rightTri, 60,Math.PI, false, rightX, Y, function() {
+        two.bind('update', rotate(leftTri, ANIMATION_TIME, Math.PI, true, leftX, Y, function() {
+                two.bind('update', rotate(rightTri, ANIMATION_TIME,Math.PI, false, rightX, Y, function() {
                     two.remove(trap, rightTri, leftTri);
                     var rect = makePoly([a.x, a.y, a.x, Y, b.x, Y, b.x, b.y]);
                     rect.fill = color;
@@ -330,7 +374,7 @@ $(function() {
         return v;
     }
 
-    function straightenTri(t)
+    function straightenTri(t, callback)
     {
         var a = t.vertices[0];
         var b = t.vertices[1];
@@ -339,9 +383,12 @@ $(function() {
         var p = PolyK.rotate(toPolyK(t), theta);
         if (p[5] > p[1])
         {
-            p = PolyK.rotate(p, Math.PI);
+            theta += Math.PI;
         }
-        t.vertices = makeVertices(p);
+
+        two.bind('update', rotate(t, ANIMATION_TIME, theta, true, 0, 0, function() {
+            if (callback) callback();
+        })).play();
         return t;
     }
 
