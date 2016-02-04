@@ -12,7 +12,7 @@ PolyK.scale = function(p, scaleX, scaleY)
     var A = [[scaleX, 0], [0, scaleY]];
     p = math.multiply(PolyK.unflatten(p), A);
     p = PolyK.translate(PolyK.flatten(p), (box.x+box.width/2)*(-scaleX+1), (box.y+box.height/2)*(-scaleX+1));
-    return PolyK.flatten(p);
+    return p;
 }
 
 PolyK.rotate = function(p, theta, x, y)
