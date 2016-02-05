@@ -8,10 +8,10 @@ var POLY_A_COLOR = '#00BBFF';
 var POLY_B_COLOR = '#1AA130';
 var POLY_ERR_COLOR = '#A31D46';
 var POLY_HALF_OPACITY = 0.6;
-var MAX_H = 500;
+var MAX_H = 200;
 var MAX_W = 500;
 var ALPHA = 0.01;
-var ANIMATION_TIME = 40;
+var ANIMATION_TIME = 30;
 var PADDING = 50;
 var UNIT_WIDTH = 200;
 
@@ -25,11 +25,19 @@ var speedAY;
 var speedBX;
 var speedBY
 
+var currentI = 0;
+
 $(function() {
     var two = new Two({
         fullscreen: true
     }).appendTo(document.body);
     var mouse = new Two.Anchor(two.width/2, two.height/2);
+
+    var stackPoly = new Two.Path([], true);
+    stackPoly.fill = POLY_A_COLOR;
+    two.add(stackPoly);
+
+    var stackPt = new Two.Anchor((two.width-MAX_W)/2, two.height - PADDING);
 
     // var triangle = straightenTri(makePoly([150,50,510,100,300,500]));
     // triangle.fill = POLY_B_COLOR;
@@ -166,14 +174,7 @@ $(function() {
                             two.bind('update', translate(polyA, ANIMATION_TIME, -boxA.x, -boxA.y)).play();
                             two.bind('update', translate(polyB, ANIMATION_TIME, -(boxB.x - boxA.width - PADDING), -boxB.y, function() {
                                 triangulate();
-                                for (var i = 0; i < trisA.length; i++)
-                                {
-                                    straightenTri(trisA[i], function(){
-                                        // triToRect(trisA[i], function() {
-                                        //     normalizeRect(trisA[i]);
-                                        // });
-                                    });
-                                }
+                                buildStack();
                             })).play();
                         })).play();
                         
@@ -190,6 +191,41 @@ $(function() {
             }
         }
     }
+
+    function buildStack() {
+        var currTri = trisA[currentI];
+
+        two.bind('update', straightenTri(currTri, function() {
+            var box = PolyK.GetAABB(toPolyK(currTri));
+            two.bind('update', translate(currTri, ANIMATION_TIME, 500, 500, function() {
+                two.bind('update', triToRect(currTri, function () {
+                    two.bind('update', normalizeRect(currTri, function() {
+                        var box = PolyK.GetAABB(toPolyK(currTri));
+                        stackPt.y -= box.height;
+                        two.bind('update', translate(currTri, ANIMATION_TIME, stackPt.x-box.x, stackPt.y-box.y, function(){
+                        //     two.remove(currTri);
+
+                        //     var stackHeight = PolyK.GetAABB(toPolyK(stackPoly)).height;
+                        //     if (Math.abs(stackHeight) < Math.Infinity) {}
+                        //     else {var stackHeight = 0;}
+
+                        //     stackPoly.vertices = makeVertices(
+                        //         [stackPt.x, stackPt.y, stackPt.x+UNIT_WIDTH, stackPt.y, 
+                        //         stackPt.x+UNIT_WIDTH, stackPt.y+box.height+stackHeight, stackPt.x, stackPt.y+box.height+stackHeight]
+                        //     );
+
+                            if(currentI < trisA.length-1)
+                            {
+                                currentI++;
+                                buildStack();
+                            }
+                        })).play();
+                    })).play();
+                })).play();
+            })).play();
+        })).play();
+    }
+
 
     function calculateArea(a, b)
     {
@@ -229,7 +265,7 @@ $(function() {
         var box = PolyK.GetAABB(toPolyK(p));
         if (box.width >= UNIT_WIDTH)
         {
-            stack(p);
+            return stack(p, callback);
         }
         else
         {
@@ -249,15 +285,14 @@ $(function() {
 
             two.remove(p);
 
-            two.bind('update', translate(smallTri, 30, UNIT_WIDTH*normalH/box.height, normalH, function() {
-                two.bind('update', translate(bigTri, 30, (box.height-normalH)*UNIT_WIDTH/box.height, box.height-normalH, function() {
+            return translate(smallTri, ANIMATION_TIME, UNIT_WIDTH*normalH/box.height, normalH, function() {
+                two.bind('update', translate(bigTri, ANIMATION_TIME, (box.height-normalH)*UNIT_WIDTH/box.height, box.height-normalH, function() {
                     two.remove(smallTri, bigTri, penta);
-                    var normalRect = makePoly([box.x, box.y+box.height-normalH, box.x+UNIT_WIDTH, box.y+box.height-normalH, box.x+UNIT_WIDTH, box.y+box.height, box.x, box.y+box.height]);
-                    normalRect.fill = p.fill;
-                    two.add(normalRect);
-                    p = normalRect;
+                    p.vertices = makeVertices([box.x, box.y+box.height-normalH, box.x+UNIT_WIDTH, box.y+box.height-normalH, box.x+UNIT_WIDTH, box.y+box.height, box.x, box.y+box.height]);
+                    two.add(p);
+                    if (callback) callback();
                 })).play();
-            })).play();
+            });
         }
     }
 
@@ -277,15 +312,12 @@ $(function() {
 
         two.remove(p);
 
-        two.bind('update', rotate(right, ANIMATION_TIME, Math.PI, true, pivotX, pivotY, function() {
+        return rotate(right, ANIMATION_TIME, Math.PI, true, pivotX, pivotY, function() {
             two.remove(left, right);
-            var rect = makePoly([box.x, box.y-box.height, pivotX, box.y-box.height, pivotX, box.y+box.height, box.x, box.y+box.height]);
-            rect.fill = p.fill;
-            two.add(rect);
-            p = rect;
-            if (callback) normalizeRect(p, callback);
-            else normalizeRect(p);
-        })).play();
+            p.vertices = makeVertices([box.x, box.y-box.height, pivotX, box.y-box.height, pivotX, box.y+box.height, box.x, box.y+box.height]);
+            two.add(p);
+            two.bind('update', normalizeRect(p, callback)).play();
+        });
 
     }
 
@@ -304,6 +336,9 @@ $(function() {
             t.fill = POLY_A_COLOR;
             trisA.push(permuteTriVertices(t));
             two.add(t);
+
+            var width = Math.abs(t.vertices[0].distanceTo(t.vertices[1]));
+            UNIT_WIDTH = Math.min(width, UNIT_WIDTH);
         }
         two.remove(polyA);
 
@@ -352,16 +387,14 @@ $(function() {
         rightTri.fill = color;
         two.add(rightTri)
 
-        two.bind('update', rotate(leftTri, ANIMATION_TIME, Math.PI, true, leftX, Y, function() {
-                two.bind('update', rotate(rightTri, ANIMATION_TIME,Math.PI, false, rightX, Y, function() {
-                    two.remove(trap, rightTri, leftTri);
-                    var rect = makePoly([a.x, a.y, a.x, Y, b.x, Y, b.x, b.y]);
-                    rect.fill = color;
-                    two.add(rect);
-                    t = rect;
-                    if(callback) callback();
-                })).play();
+        return rotate(leftTri, ANIMATION_TIME, Math.PI, true, leftX, Y, function() {
+            two.bind('update', rotate(rightTri, ANIMATION_TIME,Math.PI, false, rightX, Y, function() {
+                two.remove(trap, rightTri, leftTri);
+                t.vertices = makeVertices([a.x, a.y, a.x, Y, b.x, Y, b.x, b.y]);
+                two.add(t);
+                if(callback) callback();
             })).play();
+        });
     }
 
     function makeVertices(p)
@@ -386,10 +419,9 @@ $(function() {
             theta += Math.PI;
         }
 
-        two.bind('update', rotate(t, ANIMATION_TIME, theta, true, 0, 0, function() {
+        return rotate(t, ANIMATION_TIME, theta, true, 0, 0, function() {
             if (callback) callback();
-        })).play();
-        return t;
+        });
     }
 
     function permuteTriVertices(t)

@@ -1,4 +1,5 @@
-find scaling factor using dimensions
+calculate unit width based on shortest triangle
+
 stack rectangles
 	global target point for next rext
 	redraw growing stack as single rect
