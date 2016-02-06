@@ -11,7 +11,7 @@ var POLY_HALF_OPACITY = 0.6;
 var MAX_H = 200;
 var MAX_W = 500;
 var ALPHA = 0.01;
-var ANIMATION_TIME = 60;
+var ANIMATION_TIME = 20;
 var DECAY = 0.9;
 var PADDING = 50;
 var UNIT_WIDTH = 200;
@@ -281,8 +281,6 @@ $(function() {
 
             two.remove(p);
 
-            speeedUp();
-
             return translate(smallTri, ANIMATION_TIME, UNIT_WIDTH*normalH/box.height, normalH, function() {
                 two.bind('update', translate(bigTri, ANIMATION_TIME, (box.height-normalH)*UNIT_WIDTH/box.height, box.height-normalH, function() {
                     two.remove(smallTri, bigTri, penta);
@@ -384,8 +382,6 @@ $(function() {
         rightTri.fill = color;
         two.add(rightTri)
 
-        speeedUp();
-
         return rotate(leftTri, ANIMATION_TIME, Math.PI, true, leftX, Y, function() {
             two.bind('update', rotate(rightTri, ANIMATION_TIME,Math.PI, false, rightX, Y, function() {
                 two.remove(trap, rightTri, leftTri);
@@ -418,14 +414,12 @@ $(function() {
             theta += Math.PI;
         }
 
-        speeedUp();
-
         return rotate(t, ANIMATION_TIME, theta, true, 0, 0, function() {
             if (callback) callback();
         });
     }
 
-    function speeedUp()
+    function speedUp()
     {
         ANIMATION_TIME *= DECAY;
     }
