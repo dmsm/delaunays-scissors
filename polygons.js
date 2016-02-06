@@ -11,7 +11,7 @@ var POLY_HALF_OPACITY = 0.6;
 var MAX_H = 200;
 var MAX_W = 500;
 var ALPHA = 0.01;
-var ANIMATION_TIME = 30;
+var ANIMATION_TIME = 20;
 var PADDING = 50;
 var UNIT_WIDTH = 200;
 
@@ -38,17 +38,6 @@ $(function() {
     two.add(stackPoly);
 
     var stackPt = new Two.Anchor((two.width-MAX_W)/2, two.height - PADDING);
-
-    // var triangle = straightenTri(makePoly([150,50,510,100,300,500]));
-    // triangle.fill = POLY_B_COLOR;
-    // two.add(triangle);
-    // triToRect(triangle);
-    // two.update();
-    // var rect = makePoly([50,300,50,310,1850,310,1850,300]);
-    // rect.fill=POLY_A_COLOR;
-    // two.add(rect);
-    // normalizeRect(rect);
-    // two.update();
 
     var polyA = two.makePath(0,0).noStroke();
     polyA.fill = POLY_A_COLOR;
@@ -203,16 +192,16 @@ $(function() {
                         var box = PolyK.GetAABB(toPolyK(currTri));
                         stackPt.y -= box.height;
                         two.bind('update', translate(currTri, ANIMATION_TIME, stackPt.x-box.x, stackPt.y-box.y, function(){
-                        //     two.remove(currTri);
+                            two.remove(currTri);
 
-                        //     var stackHeight = PolyK.GetAABB(toPolyK(stackPoly)).height;
-                        //     if (Math.abs(stackHeight) < Math.Infinity) {}
-                        //     else {var stackHeight = 0;}
+                            var stackHeight;
+                            if (stackPoly.vertices.length > 0) stackHeight = PolyK.GetAABB(toPolyK(stackPoly)).height;
+                            else stackHeight = 0;
 
-                        //     stackPoly.vertices = makeVertices(
-                        //         [stackPt.x, stackPt.y, stackPt.x+UNIT_WIDTH, stackPt.y, 
-                        //         stackPt.x+UNIT_WIDTH, stackPt.y+box.height+stackHeight, stackPt.x, stackPt.y+box.height+stackHeight]
-                        //     );
+                            stackPoly.vertices = makeVertices(
+                                [stackPt.x, stackPt.y, stackPt.x+UNIT_WIDTH, stackPt.y, 
+                                stackPt.x+UNIT_WIDTH, stackPt.y+box.height+stackHeight, stackPt.x, stackPt.y+box.height+stackHeight]
+                            );  
 
                             if(currentI < trisA.length-1)
                             {
@@ -263,13 +252,19 @@ $(function() {
     function normalizeRect(p, callback)
     {
         var box = PolyK.GetAABB(toPolyK(p));
-        if (box.width >= UNIT_WIDTH)
+
+        if (box.width == UNIT_WIDTH)
+        {
+            if (callback) return callback;
+            else return;
+        }
+        else if (box.width > UNIT_WIDTH)
         {
             return stack(p, callback);
         }
         else
         {
-            var normalH = PolyK.GetArea(toPolyK(p)) / UNIT_WIDTH;
+            var normalH = Math.abs(PolyK.GetArea(toPolyK(p))) / UNIT_WIDTH;
 
             var penta = makePoly([box.x, box.y+box.height-normalH, box.x, box.y+box.height, box.x+box.width, box.y+box.height, box.x+UNIT_WIDTH*normalH/box.height, box.y+normalH, box.x+(box.height-normalH)*UNIT_WIDTH/box.height, box.y+box.height-normalH]);
             penta.fill = p.fill;
@@ -336,10 +331,9 @@ $(function() {
             t.fill = POLY_A_COLOR;
             trisA.push(permuteTriVertices(t));
             two.add(t);
-
-            var width = Math.abs(t.vertices[0].distanceTo(t.vertices[1]));
-            UNIT_WIDTH = Math.min(width, UNIT_WIDTH);
+            UNIT_WIDTH = Math.min(UNIT_WIDTH, 2*t.vertices[0].distanceTo(t.vertices[1])-1);
         }
+
         two.remove(polyA);
 
         trisB = PolyK.Triangulate(polyKB);
