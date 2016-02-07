@@ -1,21 +1,70 @@
-
-<html>
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
-        <title>Scissors-congruent Polygons</title>
-        
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.min.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/two.js/0.5.0/two.min.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/2.6.0/math.min.js"></script>
-        <script type="text/javascript" src="http://polyk.ivank.net/polyk.js"></script>
-        <script type="text/javascript" src="polygons.js"></script>
-        <script type="text/javascript" src="transformations.js"></script>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Scissors-congruent Polygons</title>
 
-    </head>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/two.js/0.5.0/two.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/2.6.0/math.min.js"></script>
+    <script type="text/javascript" src="http://polyk.ivank.net/polyk.js"></script>
+    <script type="text/javascript" src="polygons.js"></script>
+    <script type="text/javascript" src="transformations.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 
-    <body>
-        
-    </body>
+    <style>
+        body {
+            overflow: hidden;
+        }
+        .scroll {
+            overflow-y: scroll;
+            height: 100vh;
+        }
+        .spaced {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div id="canvas" class="col-sm-9" >
+            </div>
+            <div class="col-sm-3 scroll">
+                <h1>Scissors</h1>
+                <p class="lead">An interactive demonstration of the Wallace–Bolyai–Gerwien theorem.</p>
+                <blockquote>
+                    <h3>Theorem (Wallace-Bolyai-Gerwien)</h3>
+                    <img class="img-responsive" src="diagram.svg">
+                    <p>
+                    Any two simple polygons of equal area can be dissected into a finite number of congruent polygonal pieces.
+                    </p>
+                </blockquote>
+                <h4>You:</h4>
+                <ol>
+                    <li><mark>Draw the first polygon.</mark></li>
+                    <li>Draw the second polygon.</li>
+                </ol>
+                <h4>We:</h4>
+                <ol>
+                    <li>Rescale the polygons so that they are of equal area.</li>
+                    <li>Triangulate the first polygon.</li>
+                    <li>Convert the triangles to rectangles.</li>
+                    <li>Fill up the second polygon.</li>
+                </ol>
+                <a href="#" id="reset">Try again?</a>
+
+                <a href="https://github.com/dmsm/scissors-congruent-polygons"><img class="img-responsive center-block spaced" src="github.png"></a>
+            </div>
+        </div>
+    </div>
+
+</body>
+
 </html>
-

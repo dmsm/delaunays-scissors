@@ -25,16 +25,22 @@ var speedBY
 var currI = 0;
 
 $(function() {
+    var elt = document.getElementById('canvas');
     var two = new Two({
-        fullscreen: true
-    }).appendTo(document.body);
+        width: $(elt).width(),
+        height: $(window).height()
+    }).appendTo(elt);
     var mouse = new Two.Anchor(two.width/2, two.height/2);
+
+    $("#reset").click(function() {
+
+    })
 
     var MAX_H = two.height/2;
     var MAX_W = 2*two.width/9;
     var UNIT_WIDTH = MAX_W;
 
-    var stackPoly = new Two.Path([], true);
+    var stackPoly = new Two.Path([], true).noStroke();
     stackPoly.fill = POLY_A_COLOR;
     two.add(stackPoly);
 
@@ -70,7 +76,7 @@ $(function() {
     var isValidPoly = true; // none of the edges cross each other
     var origin = new Two.Anchor(two.width/2, two.height/2);
 
-    $window = $(window).bind('mousemove.userDrawing', redraw).bind('click.userDrawing', addPoint);
+    $canvas = $("#canvas").bind('mousemove.userDrawing', redraw).bind('click.userDrawing', addPoint);
 
     function redraw(e)
     {
@@ -165,7 +171,7 @@ $(function() {
                     }
                     else
                     {
-                        $window.unbind('.userDrawing'); // input completed
+                        $canvas.unbind('.userDrawing'); // input completed
 
                         var areaA = PolyK.GetArea(toPolyK(polyA));
                         var areaB = PolyK.GetArea(toPolyK(polyB));
@@ -182,7 +188,7 @@ $(function() {
                             two.bind('update', translate(polyA, ANIMATION_TIME, -boxA.x+PADDING, -boxA.y+PADDING)).play();
                             two.bind('update', translate(polyB, ANIMATION_TIME, two.width-boxB.x-boxB.width-PADDING, two.height-boxB.y-boxB.height-PADDING, function() {
                                 triangulate();
-                                constructStack();
+                                two.bind('update', pause(ANIMATION_TIME/2, constructStack)).play();
                             })).play();
                         })).play();
                         
@@ -234,7 +240,7 @@ $(function() {
                             else
                             {
                                 currI = 0;
-                                two.bind('update', pause(ANIMATION_TIME, deconstructStack)).play();
+                                two.bind('update', pause(ANIMATION_TIME/2, deconstructStack)).play();
                             }
                         })).play();
                     })).play();
@@ -469,6 +475,7 @@ $(function() {
         }
 
         var path = new Two.Path(points, true);
+        path.stroke = 'white';
 
         return path;
 
