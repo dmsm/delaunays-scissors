@@ -8,13 +8,9 @@ var POLY_A_COLOR = '#00BBFF';
 var POLY_B_COLOR = '#1AA130';
 var POLY_ERR_COLOR = '#A31D46';
 var POLY_HALF_OPACITY = 0.6;
-var MAX_H = 200;
-var MAX_W = 500;
 var ALPHA = 0.01;
 var ANIMATION_TIME = 20;
-var DECAY = 0.9;
 var PADDING = 50;
-var UNIT_WIDTH = 200;
 
  // max distance from start vertex at which we close poly
 var PRECISION = 30;
@@ -34,6 +30,10 @@ $(function() {
     }).appendTo(document.body);
     var mouse = new Two.Anchor(two.width/2, two.height/2);
 
+    var MAX_H = two.height/2;
+    var MAX_W = 2*two.width/9;
+    var UNIT_WIDTH = MAX_W;
+
     var stackPoly = new Two.Path([], true);
     stackPoly.fill = POLY_A_COLOR;
     two.add(stackPoly);
@@ -41,7 +41,8 @@ $(function() {
     var line = new Two.Path([]);
     line.stroke = POLY_A_COLOR;
 
-    var stackPt = new Two.Anchor((two.width-MAX_W)/2, two.height - PADDING);
+    var stackPt;
+    var area;
 
     var polyA = two.makePath(0,0).noStroke();
     polyA.fill = POLY_A_COLOR;
@@ -168,18 +169,18 @@ $(function() {
 
                         var areaA = PolyK.GetArea(toPolyK(polyA));
                         var areaB = PolyK.GetArea(toPolyK(polyB));
-                        var area = calculateArea(polyA, polyB);
+                        area = calculateArea(polyA, polyB);
                         
                         two.frameCount = 0;
 
-                        two.bind('update', scale(polyA, 30, area/areaA)).play();
-                        two.bind('update', scale(polyB, 30, area/areaB, function() {
+                        two.bind('update', scale(polyA, ANIMATION_TIME, area/areaA)).play();
+                        two.bind('update', scale(polyB, ANIMATION_TIME, area/areaB, function() {
 
                             var boxA = PolyK.GetAABB(toPolyK(polyA));
                             var boxB = PolyK.GetAABB(toPolyK(polyB));
 
-                            two.bind('update', translate(polyA, ANIMATION_TIME, -boxA.x, -boxA.y)).play();
-                            two.bind('update', translate(polyB, ANIMATION_TIME, -(boxB.x - boxA.width - PADDING), -boxB.y, function() {
+                            two.bind('update', translate(polyA, ANIMATION_TIME, -boxA.x+PADDING, -boxA.y+PADDING)).play();
+                            two.bind('update', translate(polyB, ANIMATION_TIME, two.width-boxB.x-boxB.width-PADDING, two.height-boxB.y-boxB.height-PADDING, function() {
                                 triangulate();
                                 constructStack();
                             })).play();
@@ -207,7 +208,8 @@ $(function() {
 
         two.bind('update', straightenTri(currTri, ANIMATION_TIME, function() {
             var box = PolyK.GetAABB(toPolyK(currTri));
-            two.bind('update', translate(currTri, ANIMATION_TIME, 500, 500, function() {
+            var longestSide = currTri.vertices[0].distanceTo(currTri.vertices[1]);
+            two.bind('update', translate(currTri, ANIMATION_TIME, PADDING-box.x, two.height-box.y-box.height-longestSide, function() {
                 two.bind('update', triToRect(currTri, function () {
                     two.bind('update', normalizeRect(currTri, UNIT_WIDTH, function() {
                         var box = PolyK.GetAABB(toPolyK(currTri));
@@ -252,13 +254,14 @@ $(function() {
 
 
         var slice = makePoly([stackBox.x, stackBox.y, stackBox.x+stackBox.width, stackBox.y, stackBox.x+stackBox.width, stackBox.y+sliceHeight, stackBox.x, stackBox.y+sliceHeight]);
-        slice.fill = POLY_B_COLOR;
+        slice.fill = stackPoly.fill;
         two.add(slice);
 
         var longestSide = currTri.vertices[0].distanceTo(currTri.vertices[1]);
 
+        var sliceBox = PolyK.GetAABB(toPolyK(slice));
 
-        two.bind('update', translate(slice, ANIMATION_TIME, 100, -200, function() {
+        two.bind('update', translate(slice, ANIMATION_TIME, two.width-sliceBox.x-Math.max(sliceBox.width, longestSide)-PADDING, longestSide-sliceBox.y, function() {
             two.bind('update', normalizeRect(slice, longestSide, function() {
                 two.bind('update', rectToTri(slice, currTri, function() {
                     two.bind('update', rotate(currTri, ANIMATION_TIME, terminalTheta, false, 0, 0, function() {
@@ -268,6 +271,11 @@ $(function() {
                             {
                                 currI++;
                                 deconstructStack();
+                            }
+                            else
+                            {
+                                for (var i = 0; i < trisB.length; i++) two.remove(trisB[i]);
+                                polyB.fill = POLY_A_COLOR;
                             }
                         })).play();
                     })).play();
@@ -436,6 +444,7 @@ $(function() {
             two.add(t);
             UNIT_WIDTH = Math.min(UNIT_WIDTH, 2*t.vertices[0].distanceTo(t.vertices[1])-1);
         }
+        stackPt = new Two.Anchor((two.width-MAX_W)/2, (two.height+(area/UNIT_WIDTH))/2);
 
         two.remove(polyA);
 
@@ -576,11 +585,6 @@ $(function() {
         return rotate(t, frames, terminalTheta, true, 0, 0, function() {
             if (callback) callback();
         });
-    }
-
-    function speedUp()
-    {
-        ANIMATION_TIME *= DECAY;
     }
 
     function permuteTriVertices(t)
