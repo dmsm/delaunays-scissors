@@ -1,12 +1,12 @@
 // starting vertex dot vars
-var DOT_COLOR = '#FFA500';
+var DOT_COLOR = '#FCEBB6';
 var DOT_OPACITY = 0.6;
 var dot;
 
 // polygon vars
-var POLY_A_COLOR = '#00BBFF';
-var POLY_B_COLOR = '#1AA130';
-var POLY_ERR_COLOR = '#A31D46';
+var POLY_A_COLOR = '#78C0A8';
+var POLY_B_COLOR = '#F0A830';
+var POLY_ERR_COLOR = 'red';
 var POLY_HALF_OPACITY = 0.6;
 var ALPHA = 0.01;
 var ANIMATION_TIME = 20;
@@ -31,6 +31,8 @@ $(function() {
         height: $(window).height()
     }).appendTo(elt);
     var mouse = new Two.Anchor(two.width/2, two.height/2);
+
+
 
     $("#reset").click(function() {
 
@@ -67,7 +69,7 @@ $(function() {
     var terminalX;
     var terminalY;
 
-     // marks the start vertex
+     // highlights the start vertex
     dot = two.makeCircle(two.width/2, two.height/2, PRECISION).noStroke();
     dot.fill = DOT_COLOR;
     dot.opacity = DOT_OPACITY;
@@ -164,6 +166,7 @@ $(function() {
                     if(polyCurr == polyA)
                     {
                         // start drawing second poly
+                        highlight($("#polyB"));
                         line.stroke = POLY_B_COLOR;
                         polyCurr = polyB;
                         origin = mouse.clone();
@@ -177,6 +180,8 @@ $(function() {
                         var areaB = PolyK.GetArea(toPolyK(polyB));
                         area = calculateArea(polyA, polyB);
                         
+                        highlight($("#rescale"));
+
                         two.frameCount = 0;
 
                         two.bind('update', scale(polyA, ANIMATION_TIME, area/areaA)).play();
@@ -187,6 +192,7 @@ $(function() {
 
                             two.bind('update', translate(polyA, ANIMATION_TIME, -boxA.x+PADDING, -boxA.y+PADDING)).play();
                             two.bind('update', translate(polyB, ANIMATION_TIME, two.width-boxB.x-boxB.width-PADDING, two.height-boxB.y-boxB.height-PADDING, function() {
+                                highlight($("#triangulate"));
                                 triangulate();
                                 two.bind('update', pause(ANIMATION_TIME/2, constructStack)).play();
                             })).play();
@@ -210,6 +216,8 @@ $(function() {
     }
 
     function constructStack() {
+        highlight($("#constructStack"));
+
         var currTri = trisA[currI];
 
         two.bind('update', straightenTri(currTri, ANIMATION_TIME, function() {
@@ -250,6 +258,8 @@ $(function() {
     }
 
     function deconstructStack() {
+        highlight($("#deconstructStack"));
+
         var currTri = trisB[currI];
 
         var sliceHeight = PolyK.GetArea(toPolyK(currTri)) / UNIT_WIDTH;
@@ -683,6 +693,14 @@ $(function() {
                 if(callback) callback();
             }
         }
+    }
+
+    function highlight(elt)
+    {
+        $("li").each(function() {
+            $(this).removeClass("highlight");
+        });
+        elt.addClass("highlight");
     }
 });
 
