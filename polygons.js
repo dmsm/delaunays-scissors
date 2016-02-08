@@ -59,6 +59,7 @@ $(function() {
     var isValidPoly;
     var origin;
     var $canvas;
+    var offset;
 
     $("#reset").click(reset);
 
@@ -70,6 +71,8 @@ $(function() {
 
         two.unbind('update').pause();
         two.clear();
+
+        offset  = $("svg").offset();
 
         two.frameCount = 0;
 
@@ -111,7 +114,6 @@ $(function() {
 
     function redraw(e)
     {
-        var offset  = $(this).offset();
         mouse.x = e.pageX - offset.left;
         mouse.y = e.pageY - offset.top;
 
@@ -139,7 +141,7 @@ $(function() {
         }
         else
         {
-            if(isValidPoly = PolyK.IsSimple(toPolyK(polyCurr)) || origin.distanceTo(mouse) <= PRECISION )
+            if((isValidPoly = PolyK.IsSimple(toPolyK(polyCurr))) || origin.distanceTo(mouse) <= PRECISION )
             {
                 polyA.fill = POLY_A_COLOR;
                 polyB.fill = POLY_B_COLOR;
