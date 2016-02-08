@@ -62,6 +62,7 @@ $(function() {
     var offset;
 
     $("#reset").click(reset);
+    $(window).resize(reset);
 
     reset();
 
@@ -72,7 +73,9 @@ $(function() {
         two.unbind('update').pause();
         two.clear();
 
-        offset  = $("svg").offset();
+        $canvas = $("svg");
+        $canvas.unbind('.userDrawing');
+        offset  = $canvas.offset();
 
         two.frameCount = 0;
 
@@ -105,7 +108,7 @@ $(function() {
         isValidPoly = true; // none of the edges cross each other
         origin = new Two.Anchor(two.width/2, two.height/2);
 
-        $canvas = $("svg").bind('mousemove.userDrawing', redraw).bind('click.userDrawing', addPoint);
+        $canvas.bind('mousemove.userDrawing', redraw).bind('click.userDrawing', addPoint);
 
         currI = 0;
 
