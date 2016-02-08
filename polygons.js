@@ -1,89 +1,119 @@
-// starting vertex dot vars
+// starting vertex marker
 var DOT_COLOR = '#FCEBB6';
 var DOT_OPACITY = 0.6;
 var dot;
 
-// polygon vars
 var POLY_A_COLOR = '#78C0A8';
 var POLY_B_COLOR = '#F0A830';
 var POLY_ERR_COLOR = 'red';
 var POLY_HALF_OPACITY = 0.6;
-var ALPHA = 0.01;
+var ALPHA = 0.01; // for iteratively calculating target area
+
 var ANIMATION_TIME = 20;
 var PADDING = 50;
+var PRECISION = 30; // max distance from start vertex at which we close poly
 
- // max distance from start vertex at which we close poly
-var PRECISION = 30;
-
-var boxA;
-var boxB;
-var speedAX;
-var speedAY;
-var speedBX;
-var speedBY
-
-var currI = 0;
 
 $(function() {
-    var elt = document.getElementById('canvas');
+    // set up two.js
+    var canvas = document.getElementById('canvas');
     var two = new Two({
-        width: $(elt).width(),
+        width: $(canvas).width(),
         height: $(window).height()
-    }).appendTo(elt);
-    var mouse = new Two.Anchor(two.width/2, two.height/2);
-
-
-
-    $("#reset").click(function() {
-
-    })
+    }).appendTo(canvas);
 
     var MAX_H = two.height/2;
     var MAX_W = 2*two.width/9;
     var UNIT_WIDTH = MAX_W;
 
-    var stackPoly = new Two.Path([], true).noStroke();
-    stackPoly.fill = POLY_A_COLOR;
-    two.add(stackPoly);
+    var mouse = new Two.Anchor(two.width/2, two.height/2);
 
-    var line = new Two.Path([]);
-    line.stroke = POLY_A_COLOR;
+    var boxA;
+    var boxB;
+    var speedAX;
+    var speedAY;
+    var speedBX;
+    var speedBY
+
+    var currI;
+    var stackPoly;
+
+    var line;
 
     var stackPt;
     var area;
 
-    var polyA = two.makePath(0,0).noStroke();
-    polyA.fill = POLY_A_COLOR;
-    polyA.opacity = POLY_HALF_OPACITY;
+    var polyA ;
 
-    var polyB = two.makePath(0,0).noStroke();
-    polyB.fill = POLY_B_COLOR;
-    polyB.opacity = POLY_HALF_OPACITY;
+    var polyB;
 
-    var polyCurr = polyA;
+    var polyCurr;
 
-    var trisA = [];
-    var trisB = [];
+    var trisA;
+    var trisB;
 
     var terminalTheta;
     var terminalX;
     var terminalY;
 
-     // highlights the start vertex
-    dot = two.makeCircle(two.width/2, two.height/2, PRECISION).noStroke();
-    dot.fill = DOT_COLOR;
-    dot.opacity = DOT_OPACITY;
-    two.update();
+    var isValidPoly;
+    var origin;
+    var $canvas;
 
-    var isValidPoly = true; // none of the edges cross each other
-    var origin = new Two.Anchor(two.width/2, two.height/2);
+    $("#reset").click(reset);
 
-    $canvas = $("#canvas").bind('mousemove.userDrawing', redraw).bind('click.userDrawing', addPoint);
+    reset();
+
+    function reset()
+    {
+        highlight($("#polyA"));
+
+        two.unbind('update').pause();
+        two.clear();
+
+        two.frameCount = 0;
+
+        trisA = [];
+        trisB = [];
+
+        polyA = two.makePath(0,0).noStroke();
+        polyA.fill = POLY_A_COLOR;
+        polyA.opacity = POLY_HALF_OPACITY;
+
+        polyB = two.makePath(0,0).noStroke();
+        polyB.fill = POLY_B_COLOR;
+        polyB.opacity = POLY_HALF_OPACITY;
+
+        polyCurr = polyA;
+
+        line = new Two.Path([]);
+        line.stroke = POLY_A_COLOR;
+
+        stackPoly = new Two.Path([], true).noStroke();
+        stackPoly.fill = POLY_A_COLOR;
+        two.add(stackPoly);
+
+         // highlights the start vertex
+        dot = two.makeCircle(two.width/2, two.height/2, PRECISION).noStroke();
+        dot.fill = DOT_COLOR;
+        dot.opacity = DOT_OPACITY;
+       
+
+        isValidPoly = true; // none of the edges cross each other
+        origin = new Two.Anchor(two.width/2, two.height/2);
+
+        $canvas = $("svg").bind('mousemove.userDrawing', redraw).bind('click.userDrawing', addPoint);
+
+        currI = 0;
+
+        two.update();
+    }
 
     function redraw(e)
     {
-        mouse.x = e.clientX;
-        mouse.y = e.clientY;
+        var offset  = $(this).offset();
+        mouse.x = e.pageX - offset.left;
+        mouse.y = e.pageY - offset.top;
 
         if (line.vertices.length > 0)
         {
@@ -703,7 +733,3 @@ $(function() {
         elt.addClass("highlight");
     }
 });
-
-
-
-
