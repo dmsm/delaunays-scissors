@@ -141,7 +141,7 @@ $(function() {
         }
         else
         {
-            if((isValidPoly = PolyK.IsSimple(toPolyK(polyCurr))) || origin.distanceTo(mouse) <= PRECISION )
+            if(isValidPoly = PolyK.IsSimple(toPolyK(polyCurr)) || origin.distanceTo(mouse) <= PRECISION )
             {
                 polyA.fill = POLY_A_COLOR;
                 polyB.fill = POLY_B_COLOR;
@@ -181,7 +181,6 @@ $(function() {
                 if (origin.distanceTo(mouse) > PRECISION)
                 {
                     polyCurr.vertices.push(mouse.clone()); // add a vertex
-
                     redraw(e);
                 }
                 else if(polyCurr.vertices.length > 3)
