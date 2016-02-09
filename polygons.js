@@ -22,11 +22,12 @@ $(function() {
         height: $(window).height()
     }).appendTo(canvas);
 
-    var MAX_H = two.height/2;
-    var MAX_W = 2*two.width/9;
-    var UNIT_WIDTH = MAX_W;
 
-    var mouse = new Two.Anchor(two.width/2, two.height/2);
+    var MAX_H;
+    var MAX_W;
+    var UNIT_WIDTH;
+
+    var mouse;
 
     var boxA;
     var boxB;
@@ -68,6 +69,15 @@ $(function() {
 
     function reset()
     {
+        two.width = $(canvas).width(),
+        two.height = $(window).height()
+
+        MAX_H = two.height/2;
+        MAX_W = 2*two.width/9;
+        UNIT_WIDTH = MAX_W;
+
+        mouse = new Two.Anchor(two.width/2, two.height/2);
+
         highlight($("#polyA"));
 
         two.unbind('update').pause();
