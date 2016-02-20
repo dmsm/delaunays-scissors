@@ -7,7 +7,14 @@ var POLY_A_COLOR = '#78C0A8';
 var POLY_B_COLOR = '#F0A830';
 var POLY_ERR_COLOR = 'red';
 var POLY_HALF_OPACITY = 0.6;
+POLY_GHOST_OPACITY = 0.3;
 var ALPHA = 0.01; // for iteratively calculating target area
+
+var START_A_TEXT = "Click anywhere to start drawing the initial polgyon polygon."
+var START_B_TEXT = "Click anywhere to start drawing the terminal polgyon polygon."
+var END_A_TEXT = "Click back in the orange circle when you are done drawing the initial polygon."
+var END_B_TEXT = "Click back in the orange circle when you are done drawing the terminal polygon."
+var ERR_TEXT = "Your edge cannot intersect any existing edges in the polygon."
 
 var ANIMATION_TIME = 20;
 var PADDING = 50;
@@ -37,7 +44,6 @@ $(function() {
     var speedBY
 
     var currI;
-    var stackPoly;
 
     var line;
 
@@ -62,6 +68,8 @@ $(function() {
     var $canvas;
     var offset;
 
+    var label;
+
     $("#reset").click(reset);
     $(window).resize(reset);
 
@@ -73,8 +81,8 @@ $(function() {
         two.height = $(window).height()
 
         MAX_H = two.height/2;
-        MAX_W = 2*two.width/9;
-        UNIT_WIDTH = MAX_W;
+        MAX_W = two.width/3;
+        UNIT_WIDTH = MAX_W - 3*PADDING;
 
         mouse = new Two.Anchor(two.width/2, two.height/2);
 
@@ -105,15 +113,15 @@ $(function() {
         line = new Two.Path([]);
         line.stroke = POLY_A_COLOR;
 
-        stackPoly = new Two.Path([], true).noStroke();
-        stackPoly.fill = POLY_A_COLOR;
-        two.add(stackPoly);
-
-         // highlights the start vertex
+        // highlights the start vertex
         dot = two.makeCircle(two.width/2, two.height/2, PRECISION).noStroke();
         dot.fill = DOT_COLOR;
         dot.opacity = DOT_OPACITY;
        
+        label = new Two.Text(START_A_TEXT, two.width/2, PADDING);
+        label.fill = POLY_A_COLOR;
+        label.size = 20;
+        two.add(label);
 
         isValidPoly = true; // none of the edges cross each other
         origin = new Two.Anchor(two.width/2, two.height/2);
@@ -156,12 +164,27 @@ $(function() {
         {
             if(isValidPoly = PolyK.IsSimple(toPolyK(polyCurr)) || origin.distanceTo(mouse) <= PRECISION )
             {
+                if (polyCurr == polyA)
+                {
+                    label.value = END_A_TEXT; 
+                    label.fill = POLY_A_COLOR;   
+                }
+                else
+                {
+                    label.value = END_B_TEXT; 
+                    label.fill = POLY_B_COLOR;  
+                }
+                
+                
                 polyA.fill = POLY_A_COLOR;
                 polyB.fill = POLY_B_COLOR;
             }
             else
             {
                 polyCurr.fill = POLY_ERR_COLOR;
+
+                label.value = ERR_TEXT;
+                label.fill = POLY_ERR_COLOR;
             }
 
             if (origin.distanceTo(mouse) > PRECISION)
@@ -210,6 +233,9 @@ $(function() {
                     if(polyCurr == polyA)
                     {
                         // start drawing second poly
+                        label.value = START_B_TEXT;
+                        label.fill = POLY_B_COLOR;
+
                         highlight($("#polyB"));
                         line.stroke = POLY_B_COLOR;
                         polyCurr = polyB;
@@ -217,7 +243,9 @@ $(function() {
                         redraw(e);
                     }
                     else
-                    {
+                    {   
+                        label.value = "";
+
                         $canvas.unbind('.userDrawing'); // input completed
 
                         var areaA = PolyK.GetArea(toPolyK(polyA));
@@ -235,7 +263,7 @@ $(function() {
                             var boxB = PolyK.GetAABB(toPolyK(polyB));
 
                             two.bind('update', translate(polyA, ANIMATION_TIME, -boxA.x+PADDING, -boxA.y+PADDING)).play();
-                            two.bind('update', translate(polyB, ANIMATION_TIME, two.width-boxB.x-boxB.width-PADDING, two.height-boxB.y-boxB.height-PADDING, function() {
+                            two.bind('update', translate(polyB, ANIMATION_TIME, two.width-boxB.x-boxB.width-PADDING, -boxB.y+PADDING, function() {
                                 highlight($("#triangulate"));
                                 triangulate();
                                 two.bind('update', pause(ANIMATION_TIME/2, constructStack)).play();
@@ -247,6 +275,17 @@ $(function() {
             }
             else // first vertex
             {
+                if (polyCurr == polyA)
+                {
+                    label.value = END_A_TEXT;
+                    label.color = POLY_A_COLOR;
+                }
+                else
+                {
+                    label.value = END_B_TEXT;
+                    label.color = POLY_B_COLOR;
+                }
+
                 origin = polyCurr.vertices[polyCurr.vertices.length-1];
 
                 polyCurr.vertices.push(mouse.clone());
@@ -267,26 +306,15 @@ $(function() {
         two.bind('update', straightenTri(currTri, ANIMATION_TIME, function() {
             var box = PolyK.GetAABB(toPolyK(currTri));
             var longestSide = currTri.vertices[0].distanceTo(currTri.vertices[1]);
-            two.bind('update', translate(currTri, ANIMATION_TIME, PADDING-box.x, two.height-box.y-box.height-longestSide, function() {
+            two.bind('update', translate(currTri, ANIMATION_TIME, (two.width-box.width)/2-box.x, two.height-box.height-PADDING-box.y, function() {
                 two.bind('update', triToRect(currTri, function () {
                     two.bind('update', normalizeRect(currTri, UNIT_WIDTH, function() {
                         var box = PolyK.GetAABB(toPolyK(currTri));
-                        stackPt.y -= box.height;
                         two.bind('update', translate(currTri, ANIMATION_TIME, stackPt.x-box.x, stackPt.y-box.y, function(){
-                            two.remove(currTri);
-
-                            var stackHeight;
-                            if (stackPoly.vertices.length > 0) stackHeight = PolyK.GetAABB(toPolyK(stackPoly)).height;
-                            else stackHeight = 0;
-
-                            stackPoly.vertices = makeVertices(
-                                [stackPt.x, stackPt.y, stackPt.x+UNIT_WIDTH, stackPt.y, 
-                                stackPt.x+UNIT_WIDTH, stackPt.y+box.height+stackHeight, stackPt.x, stackPt.y+box.height+stackHeight]
-                            );  
-
                             if(currI < trisA.length-1)
                             {
                                 currI++;
+                                stackPt.y += box.height;
                                 constructStack();
                             }
                             else
@@ -305,23 +333,28 @@ $(function() {
         highlight($("#deconstructStack"));
 
         var currTri = trisB[currI];
+        var sliceWidth = PolyK.GetArea(toPolyK(currTri)) * UNIT_WIDTH / area;
 
-        var sliceHeight = PolyK.GetArea(toPolyK(currTri)) / UNIT_WIDTH;
-        var stackBox = PolyK.GetAABB(toPolyK(stackPoly));
+        var stackHeight = 0;
+        var stackY = PolyK.GetAABB(toPolyK(trisA[0])).y
+        for (var i = 0; i < trisA.length; i++)
+        {
+            var box = PolyK.GetAABB(toPolyK(trisA[i]));
+            stackHeight += box.height;
+            trisA[i].vertices = makeVertices([box.x, box.y, box.x+box.width-sliceWidth, box.y, box.x+box.width-sliceWidth, box.y+box.height, box.x, box.y+box.height]);
+        }
 
-        if(currI == trisB.length-1) two.remove(stackPoly);
-        else stackPoly.vertices = makeVertices([stackBox.x, stackBox.y+sliceHeight, stackBox.x+stackBox.width, stackBox.y+sliceHeight, stackBox.x+stackBox.width, stackBox.y+stackBox.height, stackBox.x, stackBox.y+stackBox.height]);
-
-
-        var slice = makePoly([stackBox.x, stackBox.y, stackBox.x+stackBox.width, stackBox.y, stackBox.x+stackBox.width, stackBox.y+sliceHeight, stackBox.x, stackBox.y+sliceHeight]);
-        slice.fill = stackPoly.fill;
+        var slice = makePoly([box.x+box.width-sliceWidth, stackY, box.x+box.width, stackY, box.x+box.width, stackY+stackHeight, box.x+box.width-sliceWidth, stackY+stackHeight]);
+        slice.fill = POLY_A_COLOR;
         two.add(slice);
+
+        two.update();
 
         var longestSide = currTri.vertices[0].distanceTo(currTri.vertices[1]);
 
         var sliceBox = PolyK.GetAABB(toPolyK(slice));
 
-        two.bind('update', translate(slice, ANIMATION_TIME, two.width-sliceBox.x-Math.max(sliceBox.width, longestSide)-PADDING, longestSide-sliceBox.y, function() {
+        two.bind('update', translate(slice, ANIMATION_TIME, (two.width-sliceBox.width)/2-sliceBox.x, two.height-box.height-PADDING-box.y, function() {
             two.bind('update', normalizeRect(slice, longestSide, function() {
                 two.bind('update', rectToTri(slice, currTri, function() {
                     two.bind('update', rotate(currTri, ANIMATION_TIME, terminalTheta, false, 0, 0, function() {
@@ -334,8 +367,10 @@ $(function() {
                             }
                             else
                             {
-                                for (var i = 0; i < trisB.length; i++) two.remove(trisB[i]);
-                                polyB.fill = POLY_A_COLOR;
+                                two.bind('update', pause(ANIMATION_TIME, function () {
+                                    for (var i = 0; i < trisB.length; i++) two.remove(trisB[i]);
+                                    polyB.fill = POLY_A_COLOR;
+                                })).play();
                             }
                         })).play();
                     })).play();
@@ -501,10 +536,17 @@ $(function() {
             var t = makePoly(triangle);
             t.fill = POLY_A_COLOR;
             trisA.push(permuteTriVertices(t));
+            
+            var tGhost = makePoly(triangle);
+            tGhost.fill = POLY_A_COLOR;
+            tGhost.opacity = POLY_GHOST_OPACITY;
+
+            two.add(tGhost);
             two.add(t);
+
             UNIT_WIDTH = Math.min(UNIT_WIDTH, 2*t.vertices[0].distanceTo(t.vertices[1])-1);
         }
-        stackPt = new Two.Anchor((two.width-MAX_W)/2, (two.height+(area/UNIT_WIDTH))/2);
+        stackPt = new Two.Anchor((two.width-UNIT_WIDTH)/2, PADDING);
 
         two.remove(polyA);
 
