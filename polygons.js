@@ -5,9 +5,13 @@ var dot;
 
 var POLY_A_COLOR = '#78C0A8';
 var POLY_B_COLOR = '#F0A830';
-var POLY_ERR_COLOR = 'red';
+var SELECTED_TRI_COLOR = '#FCEBB6';
+var ERR_COLOR = 'red';
+var SUCC_COLOR = 'green';
+var CONCAVE_FILL_1 = '#777';
+var CONCAVE_FILL_2 = '#5E412F'
 var POLY_HALF_OPACITY = 0.6;
-POLY_GHOST_OPACITY = 0.3;
+var POLY_GHOST_OPACITY = 0.3;
 var ALPHA = 0.01; // for iteratively calculating target area
 
 var START_A_TEXT = "Click anywhere to start drawing the initial polgyon."
@@ -17,6 +21,9 @@ var END_B_TEXT = "Click back in the orange circle when you are done drawing the 
 var ERR_TEXT = "Your edge cannot intersect any existing edges in the polygon."
 
 var ANIMATION_TIME = 20;
+var DELAUNAY_TIME;
+var DECAY = 0.9;
+
 var PADDING = 50;
 var PRECISION = 30; // max distance from start vertex at which we close poly
 
@@ -96,6 +103,7 @@ $(function() {
         offset  = $canvas.offset();
 
         two.frameCount = 0;
+        DELAUNAY_TIME = 2*ANIMATION_TIME;
 
         trisA = [];
         trisB = [];
@@ -179,10 +187,10 @@ $(function() {
             }
             else
             {
-                polyCurr.fill = POLY_ERR_COLOR;
+                polyCurr.fill = ERR_COLOR;
 
                 label.value = ERR_TEXT;
-                label.fill = POLY_ERR_COLOR;
+                label.fill = ERR_COLOR;
             }
 
             if (origin.distanceTo(mouse) > PRECISION)
@@ -266,7 +274,7 @@ $(function() {
                                 triangulate();
 
                                 two.bind('update', pause(ANIMATION_TIME, function() {
-                                    flip(0, edgeListA.length, function() {
+                                    delaunay(0, edgeListA.length, function() {
                                         for (var i = 0; i < trisA.length; i++)
                                         {   
                                             var kA = toPolyK(trisA[i]);
@@ -613,10 +621,12 @@ $(function() {
         }
     }
 
-    function flip(index, count, callback)
+    function delaunay(index, count, callback)
     {
         if (count > 0)
         {
+            DELAUNAY_TIME *= DECAY;
+
             var edge = edgeListA[index];
 
             var tris = edgeMapA[edge].values();
@@ -653,16 +663,16 @@ $(function() {
             }
             if (PolyK.IsConvex(temp))
             {
-                tri1.fill = 'brown';
+                tri1.fill = SELECTED_TRI_COLOR;
 
                 var circumcircle = two.makeCircle(center.x, center.y, radius).noFill();
-                two.bind('update', pause(2*ANIMATION_TIME, function() {
+                two.bind('update', pause(DELAUNAY_TIME, function() {
 
                     var convex
                     var legal = center.distanceTo(candidate2) >= radius;
                     var candidatePoint = two.makeCircle(candidate2.x, candidate2.y, 10).noStroke();
-                    candidatePoint.fill = legal ? 'green' : 'red';
-                    two.bind('update', pause(2*ANIMATION_TIME, function () {
+                    candidatePoint.fill = legal ? SUCC_COLOR : ERR_COLOR;
+                    two.bind('update', pause(DELAUNAY_TIME, function () {
                         two.remove(candidatePoint);
                         two.remove(circumcircle);
                         tri1.fill = POLY_A_COLOR;
@@ -684,29 +694,29 @@ $(function() {
                             permuteTriVertices(tri2);
 
                             buildEdgeMap();
-                            flip(0, edgeListA.length, callback);
+                            delaunay(0, edgeListA.length, callback);
                         }
                         else
                         {   
                             if (index < edgeListA.length-1)
-                                flip(index+1, count-1, callback);
+                                delaunay(index+1, count-1, callback);
                             else
-                                flip(0, count-1, callback);
+                                delaunay(0, count-1, callback);
                         }
                     })).play();
                 })).play();
             }
             else
             {
-                tri1.fill = 'black';
-                tri2.fill = 'gray';
-                two.bind('update', pause(2*ANIMATION_TIME, function () {
+                tri1.fill = CONCAVE_FILL_1;
+                tri2.fill = CONCAVE_FILL_2;
+                two.bind('update', pause(DELAUNAY_TIME, function () {
                     tri1.fill = POLY_A_COLOR;
                     tri2.fill = POLY_A_COLOR;
                     if (index < edgeListA.length-1)
-                        flip(index+1, count-1, callback);
+                        delaunay(index+1, count-1, callback);
                     else
-                        flip(0, count-1, callback);
+                        delaunay(0, count-1, callback);
                 })).play();  
             }
         }
