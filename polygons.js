@@ -43,8 +43,6 @@ $(function() {
     var speedBX;
     var speedBY
 
-    var currI;
-
     var line;
 
     var stackPt;
@@ -57,8 +55,8 @@ $(function() {
     var polyCurr;
 
     var trisA;
-    var edgeMapA = {};
-    var edgeListA = [];
+    var edgeMapA;
+    var edgeListA;
     var trisB;
 
     var terminalTheta;
@@ -129,8 +127,6 @@ $(function() {
         origin = new Two.Anchor(two.width/2, two.height/2);
 
         $canvas.bind('mousemove.userDrawing', redraw).bind('click.userDrawing', addPoint);
-
-        currI = 0;
 
         two.update();
     }
@@ -270,8 +266,7 @@ $(function() {
                                 triangulate();
 
                                 two.bind('update', pause(ANIMATION_TIME, function() {
-                                    count = edgeListA.length;
-                                    flip(edgeListA, 0, edgeMapA);
+                                    flip(edgeListA, 0, edgeMapA, edgeListA.length);
                                 })).play();
                             })).play();
                         })).play();
@@ -304,85 +299,86 @@ $(function() {
         }
     }
 
-    function constructStack() {
-        highlight($("#constructStack"));
+    function constructStack(index) {
+        return function() {
+            highlight($("#constructStack"));
 
-        var currTri = trisA[currI];
+            var currTri = trisA[index];
 
-        two.bind('update', straightenTri(currTri, ANIMATION_TIME, function() {
-            var box = PolyK.GetAABB(toPolyK(currTri));
-            var longestSide = currTri.vertices[0].distanceTo(currTri.vertices[1]);
-            two.bind('update', translate(currTri, ANIMATION_TIME, (two.width-box.width)/2-box.x, two.height-box.height-PADDING-box.y, function() {
-                two.bind('update', triToRect(currTri, function () {
-                    two.bind('update', normalizeRect(currTri, UNIT_WIDTH, function() {
-                        var box = PolyK.GetAABB(toPolyK(currTri));
-                        two.bind('update', translate(currTri, ANIMATION_TIME, stackPt.x-box.x, stackPt.y-box.y, function(){
-                            if(currI < trisA.length-1)
-                            {
-                                currI++;
-                                stackPt.y += box.height;
-                                constructStack();
-                            }
-                            else
-                            {
-                                currI = 0;
-                                two.bind('update', pause(ANIMATION_TIME/2, deconstructStack)).play();
-                            }
+            two.bind('update', straightenTri(currTri, ANIMATION_TIME, function() {
+                var box = PolyK.GetAABB(toPolyK(currTri));
+                var longestSide = currTri.vertices[0].distanceTo(currTri.vertices[1]);
+                two.bind('update', translate(currTri, ANIMATION_TIME, (two.width-box.width)/2-box.x, two.height-box.height-PADDING-box.y, function() {
+                    two.bind('update', triToRect(currTri, function () {
+                        two.bind('update', normalizeRect(currTri, UNIT_WIDTH, function() {
+                            var box = PolyK.GetAABB(toPolyK(currTri));
+                            two.bind('update', translate(currTri, ANIMATION_TIME, stackPt.x-box.x, stackPt.y-box.y, function(){
+                                if(index < trisA.length-1)
+                                {
+                                    stackPt.y += box.height;
+                                    constructStack(index+1)();
+                                }
+                                else
+                                {
+                                    two.bind('update', pause(ANIMATION_TIME/2, deconstructStack(0))).play();
+                                }
+                            })).play();
                         })).play();
                     })).play();
                 })).play();
             })).play();
-        })).play();
+        }
     }
 
-    function deconstructStack() {
-        highlight($("#deconstructStack"));
+    function deconstructStack(index) {
+        return function() {
+            highlight($("#deconstructStack"));
 
-        var currTri = trisB[currI];
-        var sliceWidth = PolyK.GetArea(toPolyK(currTri)) * UNIT_WIDTH / area;
+            var currTri = trisB[index];
+            var sliceWidth = PolyK.GetArea(toPolyK(currTri)) * UNIT_WIDTH / area;
 
-        var stackHeight = 0;
-        var stackY = PolyK.GetAABB(toPolyK(trisA[0])).y
-        for (var i = 0; i < trisA.length; i++)
-        {
-            var box = PolyK.GetAABB(toPolyK(trisA[i]));
-            stackHeight += box.height;
-            trisA[i].vertices = makeVertices([box.x, box.y, box.x+box.width-sliceWidth, box.y, box.x+box.width-sliceWidth, box.y+box.height, box.x, box.y+box.height]);
-        }
+            var stackHeight = 0;
+            var stackY = PolyK.GetAABB(toPolyK(trisA[0])).y
+            for (var i = 0; i < trisA.length; i++)
+            {
+                var box = PolyK.GetAABB(toPolyK(trisA[i]));
+                stackHeight += box.height;
+                trisA[i].vertices = makeVertices([box.x, box.y, box.x+box.width-sliceWidth, box.y, box.x+box.width-sliceWidth, box.y+box.height, box.x, box.y+box.height]);
+            }
 
-        var slice = makePoly([box.x+box.width-sliceWidth, stackY, box.x+box.width, stackY, box.x+box.width, stackY+stackHeight, box.x+box.width-sliceWidth, stackY+stackHeight]);
-        slice.fill = POLY_A_COLOR;
-        two.add(slice);
+            var slice = makePoly([box.x+box.width-sliceWidth, stackY, box.x+box.width, stackY, box.x+box.width, stackY+stackHeight, box.x+box.width-sliceWidth, stackY+stackHeight]);
+            slice.fill = POLY_A_COLOR;
+            two.add(slice);
 
-        two.update();
+            two.update();
 
-        var longestSide = currTri.vertices[0].distanceTo(currTri.vertices[1]);
+            var longestSide = currTri.vertices[0].distanceTo(currTri.vertices[1]);
 
-        var sliceBox = PolyK.GetAABB(toPolyK(slice));
+            var sliceBox = PolyK.GetAABB(toPolyK(slice));
 
-        two.bind('update', translate(slice, ANIMATION_TIME, (two.width-sliceBox.width)/2-sliceBox.x, two.height-box.height-PADDING-box.y, function() {
-            two.bind('update', normalizeRect(slice, longestSide, function() {
-                two.bind('update', rectToTri(slice, currTri, function() {
-                    two.bind('update', rotate(currTri, ANIMATION_TIME, terminalTheta, false, 0, 0, function() {
-                        var triBox = PolyK.GetAABB(toPolyK(currTri));
-                        two.bind('update', translate(currTri, ANIMATION_TIME, terminalX-triBox.x, terminalY-triBox.y, function() {
-                            if(currI < trisB.length-1)
-                            {
-                                currI++;
-                                deconstructStack();
-                            }
-                            else
-                            {
-                                two.bind('update', pause(ANIMATION_TIME, function () {
-                                    for (var i = 0; i < trisB.length; i++) two.remove(trisB[i]);
-                                    polyB.fill = POLY_A_COLOR;
-                                })).play();
-                            }
+            two.bind('update', translate(slice, ANIMATION_TIME, (two.width-sliceBox.width)/2-sliceBox.x, two.height-box.height-PADDING-box.y, function() {
+                two.bind('update', normalizeRect(slice, longestSide, function() {
+                    two.bind('update', rectToTri(slice, currTri, function() {
+                        two.bind('update', rotate(currTri, ANIMATION_TIME, terminalTheta, false, 0, 0, function() {
+                            var triBox = PolyK.GetAABB(toPolyK(currTri));
+                            two.bind('update', translate(currTri, ANIMATION_TIME, terminalX-triBox.x, terminalY-triBox.y, function() {
+                                if(index < trisB.length-1)
+                                {
+                                    deconstructStack(index+1)();
+                                }
+                                else
+                                {
+                                    two.bind('update', pause(ANIMATION_TIME, function () {
+                                        for (var i = 0; i < trisB.length; i++) two.remove(trisB[i]);
+                                        polyB.fill = POLY_A_COLOR;
+                                    })).play();
+                                }
+                            })).play();
                         })).play();
                     })).play();
                 })).play();
             })).play();
-        })).play();
+        }
     }
 
     function pause(frames, callback)
@@ -553,9 +549,7 @@ $(function() {
 
             UNIT_WIDTH = Math.min(UNIT_WIDTH, 2*t.vertices[0].distanceTo(t.vertices[1])-1);
         }
-        var temp = buildEdgeMap(trisA);
-        edgeMapA = temp[0];
-        edgeListA = temp[1];
+        buildEdgeMap();
         stackPt = new Two.Anchor((two.width-UNIT_WIDTH)/2, PADDING);
 
         two.remove(polyA);
@@ -572,142 +566,144 @@ $(function() {
         }
     }
 
-    function buildEdgeMap(tris) {
-        edgeMap = {};
-        edgeList = [];
+    function buildEdgeMap() {
+        edgeMapA = {};
+        edgeListA = [];
 
-        for (var i = 0; i < tris.length-1; i++)
+        for (var i = 0; i < trisA.length-1; i++)
         {
-            for (var j = i+1; j < tris.length; j++)
+            for (var j = i+1; j < trisA.length; j++)
             {
                 var intersection = [];
-                for (var a = 0; a < tris[i].vertices.length; a++)
+                for (var a = 0; a < trisA[i].vertices.length; a++)
                 {
-                    for (var b = 0; b < tris[j].vertices.length; b++)
+                    for (var b = 0; b < trisA[j].vertices.length; b++)
                     {
-                        if (tris[i].vertices[a].x == tris[j].vertices[b].x &&
-                            tris[i].vertices[a].y == tris[j].vertices[b].y)
+                        if (trisA[i].vertices[a].x == trisA[j].vertices[b].x &&
+                            trisA[i].vertices[a].y == trisA[j].vertices[b].y)
                         {
-                            intersection.push([tris[i].vertices[a].x, tris[i].vertices[a].y]);
+                            intersection.push([trisA[i].vertices[a].x, trisA[i].vertices[a].y]);
                         }
                     }
                 }
                 if (intersection.length == 2)
                 {   
                     intersection = intersection.sort();
-                    if (intersection in edgeMap)
+                    if (intersection in edgeMapA)
                     {
-                        edgeMap[intersection].add(tris[i]);
-                        edgeMap[intersection].add(tris[j]);
+                        edgeMapA[intersection].add(trisA[i]);
+                        edgeMapA[intersection].add(trisA[j]);
                     }
                     else
                     {
-                        edgeList.push(intersection);
-                        edgeMap[intersection] = new Set([tris[i], tris[j]]);
+                        edgeListA   .push(intersection);
+                        edgeMapA[intersection] = new Set([trisA[i], trisA[j]]);
                     }
                 }
             }
         }
-        return [edgeMap, edgeList];
     }
 
-    var count;
-
-    function flip(edgeList, index, edgeMap)
+    function flip(edgeList, index, edgeMap, count)
     {
         if (count > 0)
         {
-        var edge = edgeListA[index];
+            var edge = edgeListA[index];
 
-        var tris = edgeMapA[edge].values();
-        var tri1 = tris.next().value;
-        var tri2 = tris.next().value;
-        var center = getCircumcenter(tri1);
-        var radius = getCircumradius(tri1, center);
+            var tris = edgeMapA[edge].values();
+            var tri1 = tris.next().value;
+            var tri2 = tris.next().value;
+            var center = getCircumcenter(tri1);
+            var radius = getCircumradius(tri1, center);
 
-        var candidate1;
-        for (var i = 0; i < tri1.vertices.length; i++)
-        {
-            if (edge[0][0] != tri1.vertices[i].x && edge[0][1] != tri1.vertices[i].y
-                && edge[1][0] != tri1.vertices[i].x && edge[1][1] != tri1.vertices[i].y)
+            var candidate1;
+            for (var i = 0; i < tri1.vertices.length; i++)
             {
-                candidate1 = tri1.vertices[i];
+                if (edge[0][0] != tri1.vertices[i].x && edge[0][1] != tri1.vertices[i].y
+                    && edge[1][0] != tri1.vertices[i].x && edge[1][1] != tri1.vertices[i].y)
+                {
+                    candidate1 = tri1.vertices[i];
+                }
             }
-        }
 
-        var candidate2;
-        for (var i = 0; i < tri2.vertices.length; i++)
-        {
-            if (edge[0][0] != tri2.vertices[i].x && edge[0][1] != tri2.vertices[i].y
-                && edge[1][0] != tri2.vertices[i].x && edge[1][1] != tri2.vertices[i].y)
+            var candidate2;
+            for (var i = 0; i < tri2.vertices.length; i++)
             {
-                candidate2 = tri2.vertices[i];
+                if (edge[0][0] != tri2.vertices[i].x && edge[0][1] != tri2.vertices[i].y
+                    && edge[1][0] != tri2.vertices[i].x && edge[1][1] != tri2.vertices[i].y)
+                {
+                    candidate2 = tri2.vertices[i];
+                }
             }
-        }
-        
-        var temp = [candidate1.x, candidate1.y, edge[0][0], edge[0][1], candidate2.x, candidate2.y, edge[1][0], edge[1][1]];
-        if (PolyK.GetArea(temp) < 0) {
-            var nestedTemp = PolyK.unflatten(temp);
-            nestedTemp.reverse();
-            temp = PolyK.flatten(nestedTemp);
-        }
-        if (PolyK.IsConvex(temp))
-        {
-            tri1.fill = 'brown';
+            
+            var temp = [candidate1.x, candidate1.y, edge[0][0], edge[0][1], candidate2.x, candidate2.y, edge[1][0], edge[1][1]];
+            if (PolyK.GetArea(temp) < 0) {
+                var nestedTemp = PolyK.unflatten(temp);
+                nestedTemp.reverse();
+                temp = PolyK.flatten(nestedTemp);
+            }
+            if (PolyK.IsConvex(temp))
+            {
+                tri1.fill = 'brown';
 
-            var circumcircle = two.makeCircle(center.x, center.y, radius).noFill();
-            two.bind('update', pause(2*ANIMATION_TIME, function() {
+                var circumcircle = two.makeCircle(center.x, center.y, radius).noFill();
+                two.bind('update', pause(2*ANIMATION_TIME, function() {
 
-                var convex
-                var legal = center.distanceTo(candidate2) >= radius;
-                var candidatePoint = two.makeCircle(candidate2.x, candidate2.y, 10).noStroke();
-                candidatePoint.fill = legal ? 'green' : 'red';
-                two.bind('update', pause(2*ANIMATION_TIME, function () {
-                    two.remove(candidatePoint);
-                    two.remove(circumcircle);
-                    tri1.fill = POLY_A_COLOR;
+                    var convex
+                    var legal = center.distanceTo(candidate2) >= radius;
+                    var candidatePoint = two.makeCircle(candidate2.x, candidate2.y, 10).noStroke();
+                    candidatePoint.fill = legal ? 'green' : 'red';
+                    two.bind('update', pause(2*ANIMATION_TIME, function () {
+                        two.remove(candidatePoint);
+                        two.remove(circumcircle);
+                        tri1.fill = POLY_A_COLOR;
 
-                    if (!legal)
-                    {
-                        tri1.vertices = makeVertices([candidate1.x, candidate1.y, candidate2.x, candidate2.y, edge[0][0], edge[0][1]]);
-                        tri2.vertices = makeVertices([candidate1.x, candidate1.y, candidate2.x, candidate2.y, edge[1][0], edge[1][1]])
+                        if (!legal)
+                        {
+                            tri1.vertices = makeVertices([candidate1.x, candidate1.y, candidate2.x, candidate2.y, edge[0][0], edge[0][1]]);
+                            tri2.vertices = makeVertices([candidate1.x, candidate1.y, candidate2.x, candidate2.y, edge[1][0], edge[1][1]])
 
-                        count = edgeListA.length;
+                            if(PolyK.GetArea(toPolyK(tri2)) < 0)
+                            {
+                                tri2.vertices.reverse();
+                            }
+                            if(PolyK.GetArea(toPolyK(tri2)) < 0)
+                            {
+                                tri2.vertices.reverse();
+                            }
+                            permuteTriVertices(tri1);
+                            permuteTriVertices(tri2);
 
-                        var temp = buildEdgeMap(trisA);
-                        edgeMapA = temp[0];
-                        edgeListA = temp[1];
-                        flip(edgeList, 0, edgeMap);
-                    }
-                    else
-                    {   
-                        count--;
-                        if (index < edgeListA.length-1)
-                            flip(edgeList, index+1, edgeMap);
+                            buildEdgeMap();
+                            flip(edgeList, 0, edgeMap, edgeListA.length);
+                        }
                         else
-                            flip(edgeList, 0, edgeMap);
-                    }
+                        {   
+                            if (index < edgeListA.length-1)
+                                flip(edgeList, index+1, edgeMap, count-1);
+                            else
+                                flip(edgeList, 0, edgeMap, count-1);
+                        }
+                    })).play();
                 })).play();
-            })).play();
+            }
+            else
+            {
+                tri1.fill = 'black';
+                tri2.fill = 'gray';
+                two.bind('update', pause(2*ANIMATION_TIME, function () {
+                    tri1.fill = POLY_A_COLOR;
+                    tri2.fill = POLY_A_COLOR;
+                    if (index < edgeList.length-1)
+                        flip(edgeList, index+1, edgeMap, count-1);
+                    else
+                        flip(edgeList, 0, edgeMap, count-1);
+                })).play();  
+            }
         }
         else
         {
-            count--;
-            tri1.fill = 'black';
-            tri2.fill = 'gray';
-            two.bind('update', pause(2*ANIMATION_TIME, function () {
-                tri1.fill = POLY_A_COLOR;
-                tri2.fill = POLY_A_COLOR;
-                if (index < edgeList.length-1)
-                    flip(edgeList, index+1, edgeMap);
-                else
-                    flip(edgeList, 0, edgeMap);
-            })).play();  
-        }
-        }
-        else
-        {
-            two.bind('update', pause(ANIMATION_TIME/2, constructStack)).play();
+            two.bind('update', pause(ANIMATION_TIME/2, constructStack(0))).play();
         }
     }
 
