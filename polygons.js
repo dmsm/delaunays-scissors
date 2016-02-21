@@ -8,7 +8,7 @@ var POLY_B_COLOR = '#F0A830';
 var SELECTED_TRI_COLOR = '#FCEBB6';
 var ERR_COLOR = 'red';
 var SUCC_COLOR = 'green';
-var CONCAVE_FILL_1 = '#777';
+var CONCAVE_FILL_1 = '#5E412F';
 var CONCAVE_FILL_2 = '#5E412F'
 var POLY_HALF_OPACITY = 0.6;
 var POLY_GHOST_OPACITY = 0.3;
@@ -22,7 +22,7 @@ var ERR_TEXT = "Your edge cannot intersect any existing edges in the polygon."
 
 var ANIMATION_TIME = 20;
 var DELAUNAY_TIME;
-var DECAY = 0.9;
+var DECAY = 0.92;
 
 var PADDING = 50;
 var PRECISION = 30; // max distance from start vertex at which we close poly
