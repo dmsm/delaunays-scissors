@@ -10,8 +10,8 @@ var POLY_HALF_OPACITY = 0.6;
 POLY_GHOST_OPACITY = 0.3;
 var ALPHA = 0.01; // for iteratively calculating target area
 
-var START_A_TEXT = "Click anywhere to start drawing the initial polgyon polygon."
-var START_B_TEXT = "Click anywhere to start drawing the terminal polgyon polygon."
+var START_A_TEXT = "Click anywhere to start drawing the initial polgyon."
+var START_B_TEXT = "Click anywhere to start drawing the terminal polgyon."
 var END_A_TEXT = "Click back in the orange circle when you are done drawing the initial polygon."
 var END_B_TEXT = "Click back in the orange circle when you are done drawing the terminal polygon."
 var ERR_TEXT = "Your edge cannot intersect any existing edges in the polygon."
@@ -57,6 +57,8 @@ $(function() {
     var polyCurr;
 
     var trisA;
+    var edgeMapA = {};
+    var edgeListA = [];
     var trisB;
 
     var terminalTheta;
@@ -266,7 +268,11 @@ $(function() {
                             two.bind('update', translate(polyB, ANIMATION_TIME, two.width-boxB.x-boxB.width-PADDING, -boxB.y+PADDING, function() {
                                 highlight($("#triangulate"));
                                 triangulate();
-                                two.bind('update', pause(ANIMATION_TIME/2, constructStack)).play();
+
+                                two.bind('update', pause(ANIMATION_TIME, function() {
+                                    count = edgeListA.length;
+                                    flip(edgeListA, 0, edgeMapA);
+                                })).play();
                             })).play();
                         })).play();
                         
@@ -535,17 +541,21 @@ $(function() {
                 polyKA[trA[i+2]*2], polyKA[trA[i+2]*2+1]];
             var t = makePoly(triangle);
             t.fill = POLY_A_COLOR;
-            trisA.push(permuteTriVertices(t));
+            t = permuteTriVertices(t);
+            trisA.push(t);
             
-            var tGhost = makePoly(triangle);
-            tGhost.fill = POLY_A_COLOR;
-            tGhost.opacity = POLY_GHOST_OPACITY;
+            // var tGhost = makePoly(triangle);
+            // tGhost.fill = POLY_A_COLOR;
+            // tGhost.opacity = POLY_GHOST_OPACITY;
 
-            two.add(tGhost);
+            // two.add(tGhost);
             two.add(t);
 
             UNIT_WIDTH = Math.min(UNIT_WIDTH, 2*t.vertices[0].distanceTo(t.vertices[1])-1);
         }
+        var temp = buildEdgeMap(trisA);
+        edgeMapA = temp[0];
+        edgeListA = temp[1];
         stackPt = new Two.Anchor((two.width-UNIT_WIDTH)/2, PADDING);
 
         two.remove(polyA);
@@ -560,6 +570,168 @@ $(function() {
             var t = makePoly(triangle);
             trisB.push(permuteTriVertices(t));
         }
+    }
+
+    function buildEdgeMap(tris) {
+        edgeMap = {};
+        edgeList = [];
+
+        for (var i = 0; i < tris.length-1; i++)
+        {
+            for (var j = i+1; j < tris.length; j++)
+            {
+                var intersection = [];
+                for (var a = 0; a < tris[i].vertices.length; a++)
+                {
+                    for (var b = 0; b < tris[j].vertices.length; b++)
+                    {
+                        if (tris[i].vertices[a].x == tris[j].vertices[b].x &&
+                            tris[i].vertices[a].y == tris[j].vertices[b].y)
+                        {
+                            intersection.push([tris[i].vertices[a].x, tris[i].vertices[a].y]);
+                        }
+                    }
+                }
+                if (intersection.length == 2)
+                {   
+                    intersection = intersection.sort();
+                    if (intersection in edgeMap)
+                    {
+                        edgeMap[intersection].add(tris[i]);
+                        edgeMap[intersection].add(tris[j]);
+                    }
+                    else
+                    {
+                        edgeList.push(intersection);
+                        edgeMap[intersection] = new Set([tris[i], tris[j]]);
+                    }
+                }
+            }
+        }
+        return [edgeMap, edgeList];
+    }
+
+    var count;
+
+    function flip(edgeList, index, edgeMap)
+    {
+        if (count > 0)
+        {
+        var edge = edgeListA[index];
+
+        var tris = edgeMapA[edge].values();
+        var tri1 = tris.next().value;
+        var tri2 = tris.next().value;
+        var center = getCircumcenter(tri1);
+        var radius = getCircumradius(tri1, center);
+
+        var candidate1;
+        for (var i = 0; i < tri1.vertices.length; i++)
+        {
+            if (edge[0][0] != tri1.vertices[i].x && edge[0][1] != tri1.vertices[i].y
+                && edge[1][0] != tri1.vertices[i].x && edge[1][1] != tri1.vertices[i].y)
+            {
+                candidate1 = tri1.vertices[i];
+            }
+        }
+
+        var candidate2;
+        for (var i = 0; i < tri2.vertices.length; i++)
+        {
+            if (edge[0][0] != tri2.vertices[i].x && edge[0][1] != tri2.vertices[i].y
+                && edge[1][0] != tri2.vertices[i].x && edge[1][1] != tri2.vertices[i].y)
+            {
+                candidate2 = tri2.vertices[i];
+            }
+        }
+        
+        var temp = [candidate1.x, candidate1.y, edge[0][0], edge[0][1], candidate2.x, candidate2.y, edge[1][0], edge[1][1]];
+        if (PolyK.GetArea(temp) < 0) {
+            var nestedTemp = PolyK.unflatten(temp);
+            nestedTemp.reverse();
+            temp = PolyK.flatten(nestedTemp);
+        }
+        if (PolyK.IsConvex(temp))
+        {
+            tri1.fill = 'brown';
+
+            var circumcircle = two.makeCircle(center.x, center.y, radius).noFill();
+            two.bind('update', pause(2*ANIMATION_TIME, function() {
+
+                var convex
+                var legal = center.distanceTo(candidate2) >= radius;
+                var candidatePoint = two.makeCircle(candidate2.x, candidate2.y, 10).noStroke();
+                candidatePoint.fill = legal ? 'green' : 'red';
+                two.bind('update', pause(2*ANIMATION_TIME, function () {
+                    two.remove(candidatePoint);
+                    two.remove(circumcircle);
+                    tri1.fill = POLY_A_COLOR;
+
+                    if (!legal)
+                    {
+                        tri1.vertices = makeVertices([candidate1.x, candidate1.y, candidate2.x, candidate2.y, edge[0][0], edge[0][1]]);
+                        tri2.vertices = makeVertices([candidate1.x, candidate1.y, candidate2.x, candidate2.y, edge[1][0], edge[1][1]])
+
+                        count = edgeListA.length;
+
+                        var temp = buildEdgeMap(trisA);
+                        edgeMapA = temp[0];
+                        edgeListA = temp[1];
+                        flip(edgeList, 0, edgeMap);
+                    }
+                    else
+                    {   
+                        count--;
+                        if (index < edgeListA.length-1)
+                            flip(edgeList, index+1, edgeMap);
+                        else
+                            flip(edgeList, 0, edgeMap);
+                    }
+                })).play();
+            })).play();
+        }
+        else
+        {
+            count--;
+            tri1.fill = 'black';
+            tri2.fill = 'gray';
+            two.bind('update', pause(2*ANIMATION_TIME, function () {
+                tri1.fill = POLY_A_COLOR;
+                tri2.fill = POLY_A_COLOR;
+                if (index < edgeList.length-1)
+                    flip(edgeList, index+1, edgeMap);
+                else
+                    flip(edgeList, 0, edgeMap);
+            })).play();  
+        }
+        }
+        else
+        {
+            two.bind('update', pause(ANIMATION_TIME/2, constructStack)).play();
+        }
+    }
+
+    function getCircumcenter(tri)
+    {
+        A = tri.vertices[0];
+        B = tri.vertices[1];
+        C = tri.vertices[2];
+
+        D = 2*(A.x*(B.y-C.y) + B.x*(C.y-A.y) + C.x*(A.y-B.y));
+        X = ((A.x*A.x + A.y*A.y)*(B.y - C.y) +
+             (B.x*B.x + B.y*B.y)*(C.y - A.y) +
+             (C.x*C.x + C.y*C.y)*(A.y - B.y)) / D;
+        Y = ((A.x*A.x + A.y*A.y)*(C.x - B.x) +
+             (B.x*B.x + B.y*B.y)*(A.x - C.x) +
+             (C.x*C.x + C.y*C.y)*(B.x - A.x)) / D;
+
+        return new Two.Anchor(X,Y);
+    }
+
+    function getCircumradius(tri, center)
+    {
+        A = tri.vertices[0];
+        return A.distanceTo(center);
     }
 
     function makePoly(p) {
