@@ -26,14 +26,23 @@
         <div class="row">
             <div id="canvas" class="col-sm-8"></div>
             <div class="col-sm-4 scroll">
-                <h1>Scissors<br><small>An interactive demonstration of the <a href="http://www.cut-the-knot.org/do_you_know/Bolyai.shtml">Wallace–Bolyai–Gerwien theorem.</a></small></h1>
+                <h1>Delaunay's Scissors<br><small>An interactive demonstration of <a href="https://en.wikipedia.org/wiki/Delaunay_triangulation">Delaunay triangulation</a> and the <a href="http://www.cut-the-knot.org/do_you_know/Bolyai.shtml">Wallace–Bolyai–Gerwien theorem.</a></small></h1>
                 <p class="lead">by <a href="http://zepstein.com">Zivvy Epstein</a> and <a href="mailto:dimkasmir@gmail.com">Dima Smirnov</a></p>
+                <div class="panel panel-default">
+                    <div class="panel-heading"><h4>Definition (Delaunay triangulation)</h4></div>
+                    <div class="panel-body">
+                        <img class="img-responsive" src="delaunay.svg">
+                        <p>
+                            A Delaunay trinagulation for a set of points in a plane is a triangulation in which no triangle has a circumcircle containing a point in the set.
+                        </p>
+                    </div>
+                </div>
                 <div class="panel panel-default">
                     <div class="panel-heading"><h4>Theorem (Wallace-Bolyai-Gerwien)</h4></div>
                     <div class="panel-body">
-                        <img class="img-responsive" src="diagram.svg">
+                        <img class="img-responsive" src="wbg.svg">
                         <p>
-                            Any two simple polygons of equal area can be dissected into a finite number of congruent polygonal pieces.
+                            Any simple polygon can be cut into finite pieces and stuck back together to form any other simple polygon of equal area.
                         </p>
                     </div>
                 </div>

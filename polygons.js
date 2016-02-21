@@ -5,11 +5,12 @@ var dot;
 
 var POLY_A_COLOR = '#78C0A8';
 var POLY_B_COLOR = '#F0A830';
-var SELECTED_TRI_COLOR = '#FCEBB6';
+var SELECTED_TRI_FILL = '#FCEBB6';
+var DELAUNAY_CIRCLE_STROKE = '#5E412F'
 var ERR_COLOR = 'red';
 var SUCC_COLOR = 'green';
-var CONCAVE_FILL_1 = '#5E412F';
-var CONCAVE_FILL_2 = '#5E412F'
+var CONCAVE_FILL = '#5E412F';
+var DELAUNAY_PT_RADIUS = 5;
 var POLY_HALF_OPACITY = 0.6;
 var POLY_GHOST_OPACITY = 0.3;
 var ALPHA = 0.01; // for iteratively calculating target area
@@ -126,7 +127,7 @@ $(function() {
         dot.fill = DOT_COLOR;
         dot.opacity = DOT_OPACITY;
        
-        label = new Two.Text(START_A_TEXT, two.width/2, PADDING);
+        label = new Two.Text(START_A_TEXT, two.width/2, two.height - PADDING, {family: "'Helvetica Neue', Helvetica, Arial, sans-serif"});
         label.fill = POLY_A_COLOR;
         label.size = 20;
         two.add(label);
@@ -287,7 +288,7 @@ $(function() {
                                             trisA[i].fill = POLY_A_COLOR;
                                             two.add(tGhost, trisA[i]);
                                         }
-                                        two.bind('update', pause(ANIMATION_TIME/2, constructStack(0))).play();
+                                        two.bind('update', pause(ANIMATION_TIME, constructStack(0))).play();
                                     });
                                 })).play();
                             })).play();
@@ -663,14 +664,15 @@ $(function() {
             }
             if (PolyK.IsConvex(temp))
             {
-                tri1.fill = SELECTED_TRI_COLOR;
-
+                tri1.fill = SELECTED_TRI_FILL;
+             
                 var circumcircle = two.makeCircle(center.x, center.y, radius).noFill();
+                circumcircle.sroke = DELAUNAY_CIRCLE_STROKE;
                 two.bind('update', pause(DELAUNAY_TIME, function() {
 
                     var convex
                     var legal = center.distanceTo(candidate2) >= radius;
-                    var candidatePoint = two.makeCircle(candidate2.x, candidate2.y, 10).noStroke();
+                    var candidatePoint = two.makeCircle(candidate2.x, candidate2.y, DELAUNAY_PT_RADIUS).noStroke();
                     candidatePoint.fill = legal ? SUCC_COLOR : ERR_COLOR;
                     two.bind('update', pause(DELAUNAY_TIME, function () {
                         two.remove(candidatePoint);
@@ -708,8 +710,8 @@ $(function() {
             }
             else
             {
-                tri1.fill = CONCAVE_FILL_1;
-                tri2.fill = CONCAVE_FILL_2;
+                tri1.fill = CONCAVE_FILL;
+                tri2.fill = CONCAVE_FILL;
                 two.bind('update', pause(DELAUNAY_TIME, function () {
                     tri1.fill = POLY_A_COLOR;
                     tri2.fill = POLY_A_COLOR;
