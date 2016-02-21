@@ -266,7 +266,21 @@ $(function() {
                                 triangulate();
 
                                 two.bind('update', pause(ANIMATION_TIME, function() {
-                                    flip(edgeListA, 0, edgeMapA, edgeListA.length);
+                                    flip(0, edgeListA.length, function() {
+                                        for (var i = 0; i < trisA.length; i++)
+                                        {   
+                                            var kA = toPolyK(trisA[i]);
+                                            var tGhost = makePoly(kA);
+                                            tGhost.fill = POLY_A_COLOR;
+                                            tGhost.opacity = POLY_GHOST_OPACITY;
+
+                                            two.remove(trisA[i]);
+                                            trisA[i] = makePoly(kA);
+                                            trisA[i].fill = POLY_A_COLOR;
+                                            two.add(tGhost, trisA[i]);
+                                        }
+                                        two.bind('update', pause(ANIMATION_TIME/2, constructStack(0))).play();
+                                    });
                                 })).play();
                             })).play();
                         })).play();
@@ -540,11 +554,6 @@ $(function() {
             t = permuteTriVertices(t);
             trisA.push(t);
             
-            // var tGhost = makePoly(triangle);
-            // tGhost.fill = POLY_A_COLOR;
-            // tGhost.opacity = POLY_GHOST_OPACITY;
-
-            // two.add(tGhost);
             two.add(t);
 
             UNIT_WIDTH = Math.min(UNIT_WIDTH, 2*t.vertices[0].distanceTo(t.vertices[1])-1);
@@ -604,7 +613,7 @@ $(function() {
         }
     }
 
-    function flip(edgeList, index, edgeMap, count)
+    function flip(index, count, callback)
     {
         if (count > 0)
         {
@@ -663,9 +672,9 @@ $(function() {
                             tri1.vertices = makeVertices([candidate1.x, candidate1.y, candidate2.x, candidate2.y, edge[0][0], edge[0][1]]);
                             tri2.vertices = makeVertices([candidate1.x, candidate1.y, candidate2.x, candidate2.y, edge[1][0], edge[1][1]])
 
-                            if(PolyK.GetArea(toPolyK(tri2)) < 0)
+                            if(PolyK.GetArea(toPolyK(tri1)) < 0)
                             {
-                                tri2.vertices.reverse();
+                                tri1.vertices.reverse();
                             }
                             if(PolyK.GetArea(toPolyK(tri2)) < 0)
                             {
@@ -675,14 +684,14 @@ $(function() {
                             permuteTriVertices(tri2);
 
                             buildEdgeMap();
-                            flip(edgeList, 0, edgeMap, edgeListA.length);
+                            flip(0, edgeListA.length, callback);
                         }
                         else
                         {   
                             if (index < edgeListA.length-1)
-                                flip(edgeList, index+1, edgeMap, count-1);
+                                flip(index+1, count-1, callback);
                             else
-                                flip(edgeList, 0, edgeMap, count-1);
+                                flip(0, count-1, callback);
                         }
                     })).play();
                 })).play();
@@ -694,16 +703,16 @@ $(function() {
                 two.bind('update', pause(2*ANIMATION_TIME, function () {
                     tri1.fill = POLY_A_COLOR;
                     tri2.fill = POLY_A_COLOR;
-                    if (index < edgeList.length-1)
-                        flip(edgeList, index+1, edgeMap, count-1);
+                    if (index < edgeListA.length-1)
+                        flip(index+1, count-1, callback);
                     else
-                        flip(edgeList, 0, edgeMap, count-1);
+                        flip(0, count-1, callback);
                 })).play();  
             }
         }
         else
         {
-            two.bind('update', pause(ANIMATION_TIME/2, constructStack(0))).play();
+            if (callback) callback();
         }
     }
 
