@@ -2,7 +2,7 @@ body {
     overflow: hidden;
 }
 .scroll {
-    overflow-y: scroll;
+    overflow: auto;
     height: 100vh;
 }
 .spaced {

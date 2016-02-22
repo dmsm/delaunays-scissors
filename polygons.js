@@ -5,11 +5,12 @@ var dot;
 
 var POLY_A_COLOR = '#78C0A8';
 var POLY_B_COLOR = '#F0A830';
-var SELECTED_TRI_FILL = '#FCEBB6';
-var DELAUNAY_CIRCLE_STROKE = '#5E412F'
+var SELECTED_TRI_FILL = '#4ba184';
+var DELAUNAY_CIRCLE_STROKE = '#5E412F';
+var DELAUNAY_CIRCLE_LINEWIDTH = 2;
 var ERR_COLOR = 'red';
 var SUCC_COLOR = 'green';
-var CONCAVE_FILL = '#5E412F';
+var CONCAVE_FILL = '#acd8ca';
 var DELAUNAY_PT_RADIUS = 5;
 var POLY_HALF_OPACITY = 0.6;
 var POLY_GHOST_OPACITY = 0.3;
@@ -275,6 +276,7 @@ $(function() {
                                 triangulate();
 
                                 two.bind('update', pause(ANIMATION_TIME, function() {
+                                    highlight($("#delaunay"));
                                     delaunay(0, edgeListA.length, function() {
                                         for (var i = 0; i < trisA.length; i++)
                                         {   
@@ -388,13 +390,6 @@ $(function() {
                                 if(index < trisB.length-1)
                                 {
                                     deconstructStack(index+1)();
-                                }
-                                else
-                                {
-                                    two.bind('update', pause(ANIMATION_TIME, function () {
-                                        for (var i = 0; i < trisB.length; i++) two.remove(trisB[i]);
-                                        polyB.fill = POLY_A_COLOR;
-                                    })).play();
                                 }
                             })).play();
                         })).play();
@@ -656,70 +651,82 @@ $(function() {
                 }
             }
             
-            var temp = [candidate1.x, candidate1.y, edge[0][0], edge[0][1], candidate2.x, candidate2.y, edge[1][0], edge[1][1]];
-            if (PolyK.GetArea(temp) < 0) {
-                var nestedTemp = PolyK.unflatten(temp);
-                nestedTemp.reverse();
-                temp = PolyK.flatten(nestedTemp);
-            }
-            if (PolyK.IsConvex(temp))
+            try
             {
-                tri1.fill = SELECTED_TRI_FILL;
-             
-                var circumcircle = two.makeCircle(center.x, center.y, radius).noFill();
-                circumcircle.sroke = DELAUNAY_CIRCLE_STROKE;
-                two.bind('update', pause(DELAUNAY_TIME, function() {
+                var temp = [candidate1.x, candidate1.y, edge[0][0], edge[0][1], candidate2.x, candidate2.y, edge[1][0], edge[1][1]];
 
-                    var convex
-                    var legal = center.distanceTo(candidate2) >= radius;
-                    var candidatePoint = two.makeCircle(candidate2.x, candidate2.y, DELAUNAY_PT_RADIUS).noStroke();
-                    candidatePoint.fill = legal ? SUCC_COLOR : ERR_COLOR;
-                    two.bind('update', pause(DELAUNAY_TIME, function () {
-                        two.remove(candidatePoint);
-                        two.remove(circumcircle);
-                        tri1.fill = POLY_A_COLOR;
+                if (PolyK.GetArea(temp) < 0)
+                {
+                    var nestedTemp = PolyK.unflatten(temp);
+                    nestedTemp.reverse();
+                    temp = PolyK.flatten(nestedTemp);
+                }
+                if (PolyK.IsConvex(temp))
+                {
+                    tri1.fill = SELECTED_TRI_FILL;             
+                    var circumcircle = two.makeCircle(center.x, center.y, radius).noFill();
+                    circumcircle.stroke = DELAUNAY_CIRCLE_STROKE;
+                    circumcircle.linewidth = DELAUNAY_CIRCLE_LINEWIDTH;
+                    two.bind('update', pause(DELAUNAY_TIME, function() {
 
-                        if (!legal)
-                        {
-                            tri1.vertices = makeVertices([candidate1.x, candidate1.y, candidate2.x, candidate2.y, edge[0][0], edge[0][1]]);
-                            tri2.vertices = makeVertices([candidate1.x, candidate1.y, candidate2.x, candidate2.y, edge[1][0], edge[1][1]])
+                        var legal = center.distanceTo(candidate2) >= radius;
+                        var candidatePoint = two.makeCircle(candidate2.x, candidate2.y, DELAUNAY_PT_RADIUS).noStroke();
+                        candidatePoint.fill = legal ? SUCC_COLOR : ERR_COLOR;
+                        two.bind('update', pause(DELAUNAY_TIME, function () {
+                            two.remove(candidatePoint);
+                            two.remove(circumcircle);
+                            tri1.fill = POLY_A_COLOR;
 
-                            if(PolyK.GetArea(toPolyK(tri1)) < 0)
+                            if (!legal)
                             {
-                                tri1.vertices.reverse();
-                            }
-                            if(PolyK.GetArea(toPolyK(tri2)) < 0)
-                            {
-                                tri2.vertices.reverse();
-                            }
-                            permuteTriVertices(tri1);
-                            permuteTriVertices(tri2);
+                                tri1.vertices = makeVertices([candidate1.x, candidate1.y, candidate2.x, candidate2.y, edge[0][0], edge[0][1]]);
+                                tri2.vertices = makeVertices([candidate1.x, candidate1.y, candidate2.x, candidate2.y, edge[1][0], edge[1][1]])
 
-                            buildEdgeMap();
-                            delaunay(0, edgeListA.length, callback);
-                        }
-                        else
-                        {   
-                            if (index < edgeListA.length-1)
-                                delaunay(index+1, count-1, callback);
+                                if(PolyK.GetArea(toPolyK(tri1)) < 0)
+                                {
+                                    tri1.vertices.reverse();
+                                }
+                                if(PolyK.GetArea(toPolyK(tri2)) < 0)
+                                {
+                                    tri2.vertices.reverse();
+                                }
+                                permuteTriVertices(tri1);
+                                permuteTriVertices(tri2);
+
+                                buildEdgeMap();
+                                delaunay(0, edgeListA.length, callback);
+                            }
                             else
-                                delaunay(0, count-1, callback);
-                        }
+                            {   
+                                if (index < edgeListA.length-1)
+                                    delaunay(index+1, count-1, callback);
+                                else
+                                    delaunay(0, count-1, callback);
+                            }
+                        })).play();
                     })).play();
-                })).play();
+                }
+                else
+                {
+                    tri1.fill = CONCAVE_FILL;
+                    tri2.fill = CONCAVE_FILL;
+                    two.bind('update', pause(DELAUNAY_TIME, function () {
+                        tri1.fill = POLY_A_COLOR;
+                        tri2.fill = POLY_A_COLOR;
+                        if (index < edgeListA.length-1)
+                            delaunay(index+1, count-1, callback);
+                        else
+                            delaunay(0, count-1, callback);
+                    })).play();  
+                }
             }
-            else
+            catch (e)
             {
-                tri1.fill = CONCAVE_FILL;
-                tri2.fill = CONCAVE_FILL;
-                two.bind('update', pause(DELAUNAY_TIME, function () {
-                    tri1.fill = POLY_A_COLOR;
-                    tri2.fill = POLY_A_COLOR;
-                    if (index < edgeListA.length-1)
-                        delaunay(index+1, count-1, callback);
-                    else
-                        delaunay(0, count-1, callback);
-                })).play();  
+                console.log(e);
+                if (index < edgeListA.length-1)
+                    delaunay(index+1, count-1, callback);
+                else
+                    delaunay(0, count-1, callback);
             }
         }
         else
@@ -976,5 +983,14 @@ $(function() {
             $(this).removeClass("highlight");
         });
         elt.addClass("highlight");
+    }
+
+    function scrollTo(elt)
+    {
+        // console.log(elt);
+        // console.log(elt.offset().top);
+        // $(".scroll").animate({
+        //     scrollTop: elt.offset().top
+        // }, ANIMATION_TIME*10);
     }
 });

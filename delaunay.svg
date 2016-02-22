@@ -8,7 +8,7 @@ xmlns="http://www.w3.org/2000/svg"
 x="0px"
 y="0px"
 width="500"
-height="500">
+height="320">
 <metadata>
 <rdf:RDF>
   <cc:Work
@@ -46,25 +46,33 @@ height="500">
 </metadata>
 <title id="Delaunay_circumcircles.svg" />
 
-<g style="fill:none;stroke-width:2;stroke:#78C0A8">
+<g style="fill:none;stroke-width:2;stroke:#5E412F">
 <circle cx="288" cy="-132" r="225"/>
 <circle cx="380" cy="138" r="76"/>
 <circle cx="332" cy="166" r="77"/>
-<circle cx="334" cy="271" r="83.5"/>
-<circle cx="286" cy="312" r="92.5"/>
-<circle cx="103" cy="312" r="91.5"/>
 <circle cx="150" cy="171" r="131"/>
-<circle cx="154" cy="208" r="119"/>
 <circle cx="216" cy="122" r="109.5"/>
-<circle cx="154" cy="400" r="88.5"/>
-<circle cx="287" cy="307.5" r="94"/>
 </g>
 
-<g style="stroke-width:3;stroke:#5E412F">
-<circle cx="66"  cy="395" r="4"/>
-<circle cx="194" cy="320" r="4"/>
-<circle cx="243" cy="394" r="4"/>
-<circle cx="373" cy="345" r="4"/>
+<g style="stroke-width:2.5;stroke:#78C0A8;
+          stroke-linecap:square;
+          stroke-linejoin:miter;
+          stroke-miterlimit:10;
+          stroke-dasharray:none;
+          stroke-dashoffset:0">
+<line x1="41"  y1="244" x2="273" y2="215"/>
+<line x1="394" y1="213" x2="397" y2="64"/>
+<line x1="397" y1="64"  x2="321" y2="90"/>
+<line x1="321" y1="90"  x2="273" y2="215"/>
+<line x1="273" y1="215" x2="143" y2="40"/>
+<line x1="143" y1="40"  x2="397" y2="64"/>
+<line x1="143" y1="40"  x2="41"  y2="244"/>
+<line x1="273" y1="215" x2="394" y2="213"/>
+<line x1="143" y1="40"  x2="321" y2="90"/>
+<line x1="321" y1="90"  x2="394" y2="213"/>
+</g>
+
+<g style="stroke-width:3;stroke:#F0A830;fill:#F0A830">
 <circle cx="273" cy="215" r="4"/>
 <circle cx="394" cy="213" r="4"/>
 <circle cx="41"  cy="244" r="4"/>
@@ -72,33 +80,4 @@ height="500">
 <circle cx="321" cy="90" r="4"/>
 <circle cx="397" cy="64" r="4"/>
 </g>
-
-<g style="stroke-width:2.5;stroke:#5E412F;
-          stroke-linecap:square;
-          stroke-linejoin:miter;
-          stroke-miterlimit:10;
-          stroke-dasharray:none;
-          stroke-dashoffset:0">
-<line x1="66"  y1="395" x2="243" y2="394"/>
-<line x1="243" y1="394" x2="194" y2="320"/>
-<line x1="66"  y1="395" x2="194" y2="320"/>
-<line x1="194" y1="320" x2="41"  y2="244"/>
-<line x1="41"  y1="244" x2="66"  y2="395"/>
-<line x1="41"  y1="244" x2="273" y2="215"/>
-<line x1="273" y1="215" x2="194" y2="320"/>
-<line x1="194" y1="320" x2="373" y2="345"/>
-<line x1="373" y1="345" x2="394" y2="213"/>
-<line x1="394" y1="213" x2="397" y2="64"/>
-<line x1="397" y1="64"  x2="321" y2="90"/>
-<line x1="321" y1="90"  x2="273" y2="215"/>
-<line x1="273" y1="215" x2="143" y2="40"/>
-<line x1="143" y1="40"  x2="397" y2="64"/>
-<line x1="143" y1="40"  x2="41"  y2="244"/>
-<line x1="243" y1="394" x2="373" y2="345"/>
-<line x1="373" y1="345" x2="273" y2="215"/>
-<line x1="273" y1="215" x2="394" y2="213"/>
-<line x1="143" y1="40"  x2="321" y2="90"/>
-<line x1="321" y1="90"  x2="394" y2="213"/>
-</g>
-
 </svg>

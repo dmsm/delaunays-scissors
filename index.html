@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Scissors</title>
+    <title>Delaunay's Scissors</title>
 
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/two.js/0.6.0/two.min.js"></script>
@@ -25,15 +25,15 @@
     <div class="container-fluid">
         <div class="row">
             <div id="canvas" class="col-sm-8"></div>
-            <div class="col-sm-4 scroll">
-                <h1>Delaunay's Scissors<br><small>An interactive demonstration of <a href="https://en.wikipedia.org/wiki/Delaunay_triangulation">Delaunay triangulation</a> and the <a href="http://www.cut-the-knot.org/do_you_know/Bolyai.shtml">Wallace–Bolyai–Gerwien theorem.</a></small></h1>
+            <div id="sidebar" class="col-sm-4 scroll">
+                <h1>Delaunay's Scissors<br><small>An interactive demo of the <a href="https://en.wikipedia.org/wiki/Delaunay_triangulation">Delaunay triangulation</a> algorithm and the <a href="http://www.cut-the-knot.org/do_you_know/Bolyai.shtml">Wallace–Bolyai–Gerwien theorem.</a></small></h1>
                 <p class="lead">by <a href="http://zepstein.com">Zivvy Epstein</a> and <a href="mailto:dimkasmir@gmail.com">Dima Smirnov</a></p>
                 <div class="panel panel-default">
                     <div class="panel-heading"><h4>Definition (Delaunay triangulation)</h4></div>
                     <div class="panel-body">
                         <img class="img-responsive" src="delaunay.svg">
                         <p>
-                            A Delaunay trinagulation for a set of points in a plane is a triangulation in which no triangle has a circumcircle containing a point in the set.
+                            A Delaunay triangulation for a set of points is the triangulation with the maximum minimal angle in its triangles. This is achieved by repeatedly "flipping" edges if they are inside a triangle's circumcircle.
                         </p>
                     </div>
                 </div>
@@ -48,13 +48,20 @@
                 </div>
                 <h5>You:</h5>
                 <ol>
-                    <li id="polyA" class="highlight">Click anywhere to start drawing the initial polygon. Click back in the orange circle when you are finished</li>
+                    <li id="polyA">Click anywhere to start drawing the initial polygon. Click back in the orange circle when you are finished</li>
                     <li id="polyB">Similarly, draw the terminal polygon.</li>
                 </ol>
                 <h5>We:</h5>
                 <ol>
                     <li id="rescale">Rescale the polygons so that they are of equal area.</li>
-                    <li id="triangulate">Cut the initial polygon into triangles.</li>
+                    <li id="triangulate">Cut the initial polygon into random triangles.</li>
+                    <li id="delaunay">Find the Delaunay triangulation.</li>
+                    <ol>
+                        <li id="delaunay-edge">Take a random edge whose triangles form a convex quadrilateral.</li>
+                        <li id="delaunay-circle">Draw the circumcirlce of one of the edge's triangles.</li>
+                        <li id="delaunay-flip">If a point in the other triangle is inside the circle, flip the edge.</li>
+                        <li id="delaunay-repeat">Repeat until there are no ledges left to flip.</li>
+                    </ol>
                     <li id="constructStack">Cut and rearrange the triangles into a stack of rectangles.</li>
                     <li id="deconstructStack">Cut new rectangles, turn them into triangles, and place them inside the terminal polygon.</li>
                 </ol>
